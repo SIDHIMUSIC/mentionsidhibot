@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MentionMayaBot — Telegram group mention bot."""
+"""Telegram mention-all bot. Display name comes from the live BotFather account."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 import time
 from pathlib import Path
 
@@ -27,13 +28,29 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
-log = logging.getLogger("mentionmaya")
+log = logging.getLogger("mentionbot")
 
 API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_ID = int(os.getenv("OWNER_ID", "0") or 0)
 PORT = int(os.getenv("PORT", "0") or 0)
+
+OWNER_URL = os.getenv("OWNER_URL", "https://t.me/your_owner")
+SUPPORT_URL = os.getenv("SUPPORT_URL", "https://t.me/your_support")
+MUSIC_BOT_URL = os.getenv("MUSIC_BOT_URL", "https://t.me/your_music_bot")
+START_PHOTOS = [
+    p.strip()
+    for p in os.getenv("START_PHOTOS", "").replace("\n", ",").split(",")
+    if p.strip()
+]
+
+PREMIUM_EMOJIS = [
+    "\U0001f48e", "\U0001f98b", "\U0001f338", "\u2728", "\U0001f319", "\u26a1", "\U0001f525", "\U0001f49c", "\U0001fa77", "\U0001fa75",
+    "\U0001f9f8", "\U0001f380", "\U0001f9a2", "\U0001f33a", "\U0001f4ab", "\U0001f9ff", "\U0001f90d", "\U0001f5a4", "\u2b50", "\U0001f31f",
+    "\U0001fae7", "\U0001faa9", "\U0001fa70", "\U0001fa9e", "\U0001f451", "\U0001f48d", "\U0001f54a", "\U0001f337", "\U0001f33c", "\U0001f308",
+    "\u2744", "\U0001f30a", "\U0001fa90",
+]
 
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -46,27 +63,12 @@ DEFAULT_SETTINGS = {
     "names": True,
 }
 
-HELP_TEXT = (
-    "**MentionMayaBot** \U0001faf6\n\n"
-    "Group ke sab logon ko tag karne wala bot.\n\n"
-    "**Mention**\n"
-    "`/all` `/tagall` `/everyone` `/mention` `[text]`\n"
-    "Group mein `@all` `#all` `@everyone` bhi chalega.\n\n"
-    "**Aur commands**\n"
-    "`/admins` — sirf admins\n"
-    "`/bots` — group bots\n"
-    "`/cancel` `/stop` — mention band\n"
-    "`/settings` — group options\n"
-    "`/stats` `/ping` `/help`\n\n"
-    "Bot ko group **admin** banana zaroori hai."
-)
+ME_NAME = "Bot"
+ME_USERNAME = ""
 
-START_TEXT = (
-    "Hey, main **MentionMayaBot** hoon \U0001f979\n\n"
-    "Mujhe group mein add karo, admin banao, phir `/all` ya `@all` se "
-    "saari team ko ek saath bulao.\n\n"
-    "Help ke liye `/help`."
-)
+
+def bot_name() -> str:
+    return ME_NAME or "Bot"
 
 
 def load_all_settings() -> dict:
@@ -104,11 +106,59 @@ def update_chat_settings(chat_id: int, **changes) -> dict:
 if not API_ID or not API_HASH or not BOT_TOKEN:
     raise SystemExit("Set API_ID, API_HASH and BOT_TOKEN in env / .env")
 
-client = TelegramClient("mentionmaya", API_ID, API_HASH)
+client = TelegramClient("mentionbot", API_ID, API_HASH)
 
 active_jobs: set[int] = set()
 last_run: dict[int, float] = {}
 stats = {"mentions_sent": 0, "jobs": 0}
+
+
+def pick_emoji(index: int) -> str:
+    return PREMIUM_EMOJIS[index % len(PREMIUM_EMOJIS)]
+
+
+def start_caption() -> str:
+    handle = f"@{ME_USERNAME}" if ME_USERNAME else bot_name()
+    return (
+        f"\u2728 Welcome to {bot_name()} \u2728\n"
+        f"\U0001f48e {handle}\n\n"
+        "\U0001f98b Group ke saare members ko stylish mention\n"
+        "\U0001f338 `/all`  `/tagall`  `/everyone`\n"
+        "\U0001f4ab Group mein `@all` ya `#all` bhi chalega\n"
+        "\U0001f451 `/admins`  \u00b7  \U0001f9f8 `/bots`  \u00b7  \u26a1 `/cancel`\n\n"
+        "\U0001faa9 Bot ko group **admin** banao, phir tag shuru.\n"
+        "\U0001f90d Help: `/help`"
+    )
+
+
+def help_text() -> str:
+    return (
+        f"\U0001f48e **{bot_name()} commands** \U0001f48e\n\n"
+        "\u2728 `/all` `/tagall` `/everyone` `[text]`\n"
+        "\U0001f98b `@all` `#all` `@everyone`\n"
+        "\U0001f451 `/admins` \u2014 sirf admins\n"
+        "\U0001f9f8 `/bots` \u2014 group bots\n"
+        "\u26a1 `/cancel` `/stop`\n"
+        "\U0001fa9e `/settings` \u2014 admin_only / cooldown / batch / names\n"
+        "\U0001f31f `/stats` `/ping` `/help`\n\n"
+        "\U0001f338 Har member ke baad premium emoji lagta hai."
+    )
+
+
+def start_buttons():
+    add_url = (
+        f"https://t.me/{ME_USERNAME}?startgroup=true" if ME_USERNAME else SUPPORT_URL
+    )
+    return [
+        [
+            Button.url("\U0001f451 OWNER", OWNER_URL),
+            Button.url("\U0001f4ac SUPPORT", SUPPORT_URL),
+        ],
+        [
+            Button.url("\U0001f3b5 MUSIC BOT", MUSIC_BOT_URL),
+            Button.url("\u2795 ADD GROUP", add_url),
+        ],
+    ]
 
 
 async def is_admin(chat, user_id: int) -> bool:
@@ -118,7 +168,7 @@ async def is_admin(chat, user_id: int) -> bool:
         result = await client(GetParticipantRequest(chat, user_id))
     except UserNotParticipantError:
         return False
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.debug("admin check failed: %s", exc)
         return False
     return isinstance(
@@ -127,11 +177,12 @@ async def is_admin(chat, user_id: int) -> bool:
     )
 
 
-def mention_link(user: User, show_name: bool) -> str:
+def mention_link(user: User, show_name: bool, index: int) -> str:
     name = (user.first_name or "member").replace("]", "").replace("[", "")
     if not show_name:
-        name = "\u2022"
-    return f"[{name}](tg://user?id={user.id})"
+        name = "\u2661"
+    emoji = pick_emoji(index)
+    return f"[{name}](tg://user?id={user.id}) {emoji}"
 
 
 async def collect_members(chat, kind: str) -> list[User]:
@@ -159,21 +210,21 @@ async def run_mention(event, kind: str, extra_text: str) -> None:
     chat_id = event.chat_id
     sender = await event.get_sender()
     if event.is_private:
-        await event.reply("Ye command sirf **group/channel** mein kaam karti hai.")
+        await event.reply("\U0001f48e Ye command sirf **group** mein chalti hai.")
         return
 
     settings = chat_settings(chat_id)
     if settings["admin_only"] and not await is_admin(chat, sender.id):
-        await event.reply("Sirf **admins** mention chala sakte hain. `/settings`")
+        await event.reply("\U0001f451 Sirf **admins** mention chala sakte hain.")
         return
 
     wait = settings["cooldown"] - (time.time() - last_run.get(chat_id, 0))
     if wait > 0 and chat_id not in active_jobs:
-        await event.reply(f"Thoda ruko — cooldown `{int(wait)}s` bacha hai.")
+        await event.reply(f"Cooldown `{int(wait)}s` bacha hai.")
         return
 
     if chat_id in active_jobs:
-        await event.reply("Is group mein mention pehle se chal raha hai. `/cancel`")
+        await event.reply("\u26a1 Pehle se mention chal raha hai. `/cancel`")
         return
 
     active_jobs.add(chat_id)
@@ -184,11 +235,11 @@ async def run_mention(event, kind: str, extra_text: str) -> None:
 
     try:
         members = await collect_members(chat, kind)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         active_jobs.discard(chat_id)
         log.exception("member fetch failed")
         await event.reply(
-            "Members nahi mil paaye. Bot ko **admin** banao aur dubara try karo.\n"
+            "\U0001f338 Members nahi mile. Bot ko **admin** banao.\n"
             f"`{type(exc).__name__}`"
         )
         return
@@ -198,19 +249,22 @@ async def run_mention(event, kind: str, extra_text: str) -> None:
         await event.reply("Koi eligible member nahi mila.")
         return
 
-    header = extra_text.strip() if extra_text.strip() else "Maya bol rahi hai — sab yahan aao \U0001faf6"
+    header = extra_text.strip() if extra_text.strip() else f"\u2728 {bot_name()} \u2014 sab yahan aao \u2728"
     status = await event.reply(
-        f"Mention start — **{len(members)}** log, batch `{batch}`. `/cancel` se rok sakte ho."
+        f"\U0001f48e Mention start \u2014 **{len(members)}**  \u00b7  batch `{batch}`\n\u26a1 rokne ke liye `/cancel`"
     )
 
     sent = 0
     try:
         for i in range(0, len(members), batch):
             if chat_id not in active_jobs:
-                await event.reply("Mention **cancel** ho gaya.")
+                await event.reply("\u26a1 Mention **cancel** ho gaya.")
                 return
             chunk = members[i : i + batch]
-            body = header + "\n\n" + " ".join(mention_link(u, show_name) for u in chunk)
+            tags = " ".join(
+                mention_link(user, show_name, i + idx) for idx, user in enumerate(chunk)
+            )
+            body = f"{header}\n\n{tags}"
             try:
                 await client.send_message(chat_id, body, link_preview=False)
                 sent += len(chunk)
@@ -224,24 +278,36 @@ async def run_mention(event, kind: str, extra_text: str) -> None:
     finally:
         active_jobs.discard(chat_id)
 
+    done = f"\U0001f338 Done \u2728  {sent}/{len(members)} mention ho gaye."
     try:
-        await status.edit(f"Done \u2705  {sent}/{len(members)} mention ho gaye.")
-    except Exception:  # noqa: BLE001
-        await event.reply(f"Done \u2705  {sent}/{len(members)} mention ho gaye.")
+        await status.edit(done)
+    except Exception:
+        await event.reply(done)
 
 
 @client.on(events.NewMessage(pattern=r"^/(start)(@\w+)?"))
 async def start_handler(event):
-    buttons = [
-        [Button.url("BotFather", "https://t.me/BotFather")],
-        [Button.url("Source", "https://github.com/SIDHIMUSIC/mentionmayabot")],
-    ]
-    await event.reply(START_TEXT, buttons=buttons)
+    caption = start_caption()
+    buttons = start_buttons()
+    photo = random.choice(START_PHOTOS) if START_PHOTOS else None
+    if photo:
+        try:
+            await client.send_file(
+                event.chat_id,
+                photo,
+                caption=caption,
+                buttons=buttons,
+                reply_to=event.id,
+            )
+            return
+        except Exception as exc:
+            log.warning("start photo failed: %s", exc)
+    await event.reply(caption, buttons=buttons)
 
 
 @client.on(events.NewMessage(pattern=r"^/(help)(@\w+)?"))
 async def help_handler(event):
-    await event.reply(HELP_TEXT)
+    await event.reply(help_text(), buttons=start_buttons())
 
 
 @client.on(events.NewMessage(pattern=r"^/(ping)(@\w+)?"))
@@ -249,7 +315,7 @@ async def ping_handler(event):
     t0 = time.perf_counter()
     msg = await event.reply("pong...")
     ms = (time.perf_counter() - t0) * 1000
-    await msg.edit(f"pong `{ms:.0f}ms`")
+    await msg.edit(f"\u26a1 pong `{ms:.0f}ms`")
 
 
 @client.on(events.NewMessage(pattern=r"^/(stats)(@\w+)?"))
@@ -257,11 +323,11 @@ async def stats_handler(event):
     settings = chat_settings(event.chat_id)
     running = "haan" if event.chat_id in active_jobs else "nahi"
     await event.reply(
-        "**Stats**\n"
-        f"Jobs: `{stats['jobs']}`\n"
-        f"Mentions sent: `{stats['mentions_sent']}`\n"
-        f"Is group running: `{running}`\n"
-        f"admin_only: `{settings['admin_only']}`\n"
+        f"\U0001f48e **{bot_name()} stats**\n"
+        f"\u2728 Jobs: `{stats['jobs']}`\n"
+        f"\U0001f98b Mentions: `{stats['mentions_sent']}`\n"
+        f"\u26a1 Running: `{running}`\n"
+        f"\U0001f451 admin_only: `{settings['admin_only']}`\n"
         f"cooldown: `{settings['cooldown']}s`\n"
         f"batch: `{settings['batch']}`"
     )
@@ -274,11 +340,11 @@ async def cancel_handler(event):
     chat = await event.get_chat()
     sender = await event.get_sender()
     if chat_settings(event.chat_id)["admin_only"] and not await is_admin(chat, sender.id):
-        await event.reply("Cancel ke liye admin hona chahiye.")
+        await event.reply("\U0001f451 Cancel ke liye admin hona chahiye.")
         return
     if event.chat_id in active_jobs:
         active_jobs.discard(event.chat_id)
-        await event.reply("Mention stop kar diya.")
+        await event.reply("\u26a1 Mention stop.")
     else:
         await event.reply("Koi mention chal nahi raha.")
 
@@ -299,7 +365,6 @@ async def settings_handler(event):
             f"`cooldown` = `{s['cooldown']}`\n"
             f"`batch` = `{s['batch']}`\n"
             f"`names` = `{s['names']}`\n\n"
-            "Change:\n"
             "`/settings admin_only on`\n"
             "`/settings cooldown 60`\n"
             "`/settings batch 5`\n"
@@ -308,7 +373,7 @@ async def settings_handler(event):
         return
 
     if not await is_admin(chat, sender.id):
-        await event.reply("Settings sirf admin badal sakta hai.")
+        await event.reply("\U0001f451 Settings sirf admin badal sakta hai.")
         return
 
     args = [p for p in parts[1:] if not p.startswith("@")]
@@ -346,13 +411,13 @@ async def settings_handler(event):
         return
 
     await event.reply(
-        "Updated \u2705\n"
+        "\u2728 Updated\n"
         f"`admin_only={s['admin_only']}` `cooldown={s['cooldown']}` "
         f"`batch={s['batch']}` `names={s['names']}`"
     )
 
 
-MENTION_CMD = r"^/(all|tagall|everyone|mention|maya)(@\w+)?"
+MENTION_CMD = r"^/(all|tagall|everyone|mention)(@\w+)?"
 
 
 @client.on(events.NewMessage(pattern=MENTION_CMD))
@@ -360,16 +425,12 @@ async def mention_cmd(event):
     extra = ""
     raw = event.raw_text or ""
     bits = raw.split(maxsplit=1)
-    if len(bits) > 1 and not bits[1].startswith(":") and not bits[1].startswith(":"):
-        extra = bits[1] if not bits[1].startswith("@") else ""
-        if bits[1].startswith("@") and event.is_reply:
-            extra = ""
-    if not extra and event.is_reply:
+    if len(bits) > 1 and not bits[1].startswith("@"):
+        extra = bits[1]
+    elif event.is_reply:
         reply = await event.get_reply_message()
         if reply and reply.raw_text:
             extra = reply.raw_text
-    if len(bits) > 1 and not bits[1].startswith("@"):
-        extra = bits[1]
     await run_mention(event, "all", extra)
 
 
@@ -380,12 +441,12 @@ async def admins_cmd(event):
     bits = raw.split(maxsplit=1)
     if len(bits) > 1 and not bits[1].startswith("@"):
         extra = bits[1]
-    await run_mention(event, "admins", extra or "Admins needed \U0001f6a8")
+    await run_mention(event, "admins", extra or "\U0001f451 Admins needed")
 
 
 @client.on(events.NewMessage(pattern=r"^/(bots)(@\w+)?"))
 async def bots_cmd(event):
-    await run_mention(event, "bots", "Group bots")
+    await run_mention(event, "bots", "\U0001f9f8 Group bots")
 
 
 @client.on(events.NewMessage(incoming=True))
@@ -395,7 +456,7 @@ async def text_triggers(event):
     text = event.raw_text.strip().lower()
     if text.startswith("/"):
         return
-    triggers = {"@all", "#all", "@everyone", "#everyone", "@mentionmaya"}
+    triggers = {"@all", "#all", "@everyone", "#everyone"}
     first = text.split(maxsplit=1)[0]
     if first not in triggers and text not in triggers:
         return
@@ -410,7 +471,8 @@ async def health(_request):
     return web.json_response(
         {
             "ok": True,
-            "bot": "mentionmayabot",
+            "name": bot_name(),
+            "username": ME_USERNAME,
             "active_jobs": len(active_jobs),
             "mentions_sent": stats["mentions_sent"],
         }
@@ -433,9 +495,12 @@ async def start_health_server() -> web.AppRunner | None:
 
 
 async def main() -> None:
+    global ME_NAME, ME_USERNAME
     await client.start(bot_token=BOT_TOKEN)
     me = await client.get_me()
-    log.info("Bot started as @%s (%s)", me.username, me.id)
+    ME_NAME = (me.first_name or me.username or "Bot").strip()
+    ME_USERNAME = me.username or ""
+    log.info("Started as %s (@%s)", ME_NAME, ME_USERNAME)
     runner = await start_health_server()
     try:
         await client.run_until_disconnected()
