@@ -61,6 +61,14 @@ def pe_icon(name: str | None) -> int:
     seed = name or "btn"
     return int(ids[sum(ord(c) for c in seed) % len(ids)])
 
+def pe_line_icon(prefix: str, index: int) -> int:
+    return (
+        pe_icon(f"{prefix}_l{index + 1}")
+        or pe_icon(f"{prefix}_line")
+        or pe_icon(prefix)
+        or line_emoji_id(index)
+    )
+
 def btn(text: str, callback_data=None, url=None, pe_name=None, style=None) -> dict:
     key = pe_name or (text or "btn").strip().lower().replace(" ", "_")
     return {"text": sc(text), "data": callback_data, "url": url, "icon": pe_icon(key), "style": style}
@@ -234,10 +242,8 @@ def _is_start_caption(text: str) -> bool:
 
 def rich(text: str, start: int = 0):
     raw = text or ""
-    skip_arrows = _is_start_caption(raw)
+    kind = "start" if _is_start_caption(raw) else "help"
     text = sc_keep(raw)
-    if skip_arrows:
-        return text, []
     out, ents, n = "", [], start
     for i, line in enumerate(text.split("\n")):
         if i:
@@ -246,7 +252,11 @@ def rich(text: str, start: int = 0):
             continue
         off = utf16_len(out)
         out += FALLBACK
-        ents.append(MessageEntityCustomEmoji(off, utf16_len(FALLBACK), line_emoji_id(n)))
+        if kind == "start":
+            eid = pe_line_icon("start", n)
+        else:
+            eid = line_emoji_id(n)
+        ents.append(MessageEntityCustomEmoji(off, utf16_len(FALLBACK), eid))
         n += 1
         out += " " + line
     return out, ents
