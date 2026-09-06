@@ -25,19 +25,13 @@ from config import CONFIG
 
 log = logging.getLogger("mentionbot")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-PREMIUM_EMOJI_IDS = list(CONFIG["premium_emoji_ids"])
+PE_NAMES = dict(CONFIG.get("pe_names") or {})
+PREMIUM_EMOJI_IDS = list(CONFIG.get("premium_emoji_ids") or PE_NAMES.values())
 FALLBACK = "\u2728"
 SC = str.maketrans(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
     "\u1d00\u0299\u1d04\u1d05\u1d07\ua730\u0262\u029c\u026a\u1d0a\u1d0b\u029f\u1d0d\u0274\u1d0f\u1d18\u01eb\u0280\ua731\u1d1b\u1d1c\u1d20\u1d21x\u028f\u1d22\u1d00\u0299\u1d04\u1d05\u1d07\ua730\u0262\u029c\u026a\u1d0a\u1d0b\u029f\u1d0d\u0274\u1d0f\u1d18\u01eb\u0280\ua731\u1d1b\u1d1c\u1d20\u1d21x\u028f\u1d22",
 )
-PE_INDEX = {
-    "help": 0, "add": 1, "support": 2, "owner": 3, "game": 4, "updates": 5, "music": 6,
-    "tag": 7, "couples": 8, "tools": 9, "welcome": 10, "settings": 11, "security": 12,
-    "start": 13, "back": 14, "on": 15, "off": 16, "clean": 17, "anticheat": 18, "abuse": 19,
-    "approve": 20, "biolink": 21, "msgdel": 22, "edit": 23, "links": 24, "long": 25,
-    "media": 26, "promo": 27, "fwd": 28, "hash": 29, "phone": 30, "mute": 12,
-}
 PROTECT_RE = re.compile(r"(/[A-Za-z_]+|\{[A-Za-z_]+\}|https?://[^\s]+|t\.me/[^\s]+|@\w+)")
 
 
@@ -54,16 +48,17 @@ def emoji_id(i: int) -> int:
     return PREMIUM_EMOJI_IDS[i % len(PREMIUM_EMOJI_IDS)] if PREMIUM_EMOJI_IDS else 0
 
 def pe_icon(name: str | None) -> int:
+    if name and name in PE_NAMES:
+        return int(PE_NAMES[name])
     ids = PREMIUM_EMOJI_IDS
     if not ids:
         return 0
-    if name and name in PE_INDEX:
-        return int(ids[PE_INDEX[name] % len(ids)])
     seed = name or "btn"
     return int(ids[sum(ord(c) for c in seed) % len(ids)])
 
 def btn(text: str, callback_data=None, url=None, pe_name=None, style=None) -> dict:
-    return {"text": sc(text), "data": callback_data, "url": url, "icon": pe_icon(pe_name or text), "style": style}
+    key = pe_name or (text or "btn").strip().lower().replace(" ", "_")
+    return {"text": sc(text), "data": callback_data, "url": url, "icon": pe_icon(key), "style": style}
 
 def markup_json(rows) -> dict:
     keyboard = []
@@ -76,8 +71,9 @@ def markup_json(rows) -> dict:
             elif item.get("data") is not None:
                 data = item["data"]
                 cell["callback_data"] = data if isinstance(data, str) else data.decode()
-            if item.get("icon"):
-                cell["icon_custom_emoji_id"] = str(item["icon"])
+            icon = item.get("icon") or pe_icon(item.get("text"))
+            if icon:
+                cell["icon_custom_emoji_id"] = str(icon)
             if item.get("style"):
                 cell["style"] = item["style"]
             line.append(cell)
@@ -110,8 +106,18 @@ def ents_to_api(ents) -> list[dict]:
     for ent in ents or []:
         if isinstance(ent, MessageEntityCustomEmoji):
             api.append({"type": "custom_emoji", "offset": ent.offset, "length": ent.length, "custom_emoji_id": str(ent.document_id)})
+        elif isinstance(ent, MessageEntityMentionName):
+            api.append({"type": "text_mention", "offset": ent.offset, "length": ent.length, "user": {"id": int(ent.user_id)}})
         elif isinstance(ent, MessageEntityTextUrl):
-            api.append({"type": "text_link", "offset": ent.offset, "length": ent.length, "url": ent.url})
+            url = ent.url or ""
+            if url.startswith("tg://user?id="):
+                try:
+                    uid = int(url.split("id=")[-1])
+                    api.append({"type": "text_mention", "offset": ent.offset, "length": ent.length, "user": {"id": uid}})
+                    continue
+                except ValueError:
+                    pass
+            api.append({"type": "text_link", "offset": ent.offset, "length": ent.length, "url": url})
         elif isinstance(ent, MessageEntityBold):
             api.append({"type": "bold", "offset": ent.offset, "length": ent.length})
         elif isinstance(ent, MessageEntityItalic):
@@ -145,10 +151,10 @@ def dump_ents(entities, shift: int = 0) -> list[dict]:
         item = {"off": off, "len": length}
         if isinstance(ent, MessageEntityCustomEmoji):
             item["t"] = "emoji"; item["id"] = int(ent.document_id)
+        elif isinstance(ent, MessageEntityMentionName):
+            item["t"] = "mention"; item["uid"] = int(ent.user_id)
         elif isinstance(ent, MessageEntityTextUrl):
             item["t"] = "url"; item["url"] = ent.url
-        elif isinstance(ent, MessageEntityMentionName):
-            item["t"] = "url"; item["url"] = f"tg://user?id={ent.user_id}"
         elif isinstance(ent, MessageEntityBold):
             item["t"] = "bold"
         elif isinstance(ent, MessageEntityItalic):
@@ -170,8 +176,17 @@ def load_ents(items) -> list:
             continue
         if kind == "emoji" and item.get("id"):
             ents.append(MessageEntityCustomEmoji(off, length, int(item["id"])))
+        elif kind == "mention" and item.get("uid"):
+            ents.append(MessageEntityMentionName(off, length, int(item["uid"])))
         elif kind == "url" and item.get("url"):
-            ents.append(MessageEntityTextUrl(off, length, item["url"]))
+            url = item["url"]
+            if str(url).startswith("tg://user?id="):
+                try:
+                    ents.append(MessageEntityMentionName(off, length, int(str(url).split("id=")[-1])))
+                    continue
+                except ValueError:
+                    pass
+            ents.append(MessageEntityTextUrl(off, length, url))
         elif kind == "bold":
             ents.append(MessageEntityBold(off, length))
         elif kind == "italic":
@@ -229,34 +244,51 @@ async def say(client, target, text: str, buttons=None, reply_to=None):
         result = await botapi("sendMessage", {"chat_id": chat, "text": body, "entities": ents_to_api(ents), "link_preview_options": {"is_disabled": True}, "reply_markup": markup_json(rows)})
         if result.get("ok"):
             return result
-        rows = tele_buttons(rows)
     kwargs = {"formatting_entities": ents, "link_preview": False}
     if rows is not None:
-        kwargs["buttons"] = rows
+        kwargs["buttons"] = tele_buttons(rows) if dict_rows(rows) else rows
     if reply_to is not None:
         kwargs["reply_to"] = reply_to
     return await client.send_message(chat, body, **kwargs)
 
+async def send_cancel(client, chat_id: int, user_id: int, name: str) -> None:
+    name = (name or "user").strip() or "user"
+    label = sc("cancel by ")
+    text = FALLBACK + " " + label + name
+    ents = [
+        MessageEntityCustomEmoji(0, utf16_len(FALLBACK), pe_icon("back") or emoji_id(0)),
+        MessageEntityMentionName(utf16_len(FALLBACK + " " + label), utf16_len(name), int(user_id)),
+    ]
+    result = await botapi("sendMessage", {
+        "chat_id": chat_id,
+        "text": text,
+        "entities": ents_to_api(ents),
+        "link_preview_options": {"is_disabled": True},
+    })
+    if result.get("ok"):
+        return
+    await client.send_message(chat_id, text, formatting_entities=ents, link_preview=False)
+
 async def edit_say(event, text: str, buttons=None):
     body, ents = rich(text)
     rows = buttons
-    if dict_rows(rows):
-        has_media = bool(getattr(getattr(event, "message", None), "media", None))
-        payload = {"chat_id": event.chat_id, "message_id": event.message_id, "reply_markup": markup_json(rows)}
-        if has_media:
-            payload["caption"] = body
-            payload["caption_entities"] = ents_to_api(ents)
-            result = await botapi("editMessageCaption", payload)
-        else:
-            payload["text"] = body
-            payload["entities"] = ents_to_api(ents)
-            payload["link_preview_options"] = {"is_disabled": True}
-            result = await botapi("editMessageText", payload)
-        if result.get("ok"):
-            return result
-        rows = tele_buttons(rows)
-    try:
-        return await event.edit(body, formatting_entities=ents, buttons=rows)
-    except Exception:
-        from tools import runtime
-        return await say(runtime.client, event, text, buttons=buttons)
+    markup = markup_json(rows) if dict_rows(rows) else None
+    has_media = bool(getattr(getattr(event, "message", None), "media", None))
+    payload = {"chat_id": event.chat_id, "message_id": event.message_id}
+    if markup:
+        payload["reply_markup"] = markup
+    if has_media:
+        payload["caption"] = body
+        payload["caption_entities"] = ents_to_api(ents)
+        result = await botapi("editMessageCaption", payload)
+    else:
+        payload["text"] = body
+        payload["entities"] = ents_to_api(ents)
+        payload["link_preview_options"] = {"is_disabled": True}
+        result = await botapi("editMessageText", payload)
+    if result.get("ok"):
+        return result
+    if markup:
+        await botapi("editMessageReplyMarkup", {"chat_id": event.chat_id, "message_id": event.message_id, "reply_markup": markup})
+    from tools import runtime
+    return await say(runtime.client, event, text, buttons=buttons)
