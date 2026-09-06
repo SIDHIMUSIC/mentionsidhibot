@@ -27,6 +27,7 @@ log = logging.getLogger("mentionbot")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 PE_NAMES = dict(CONFIG.get("pe_names") or {})
 PREMIUM_EMOJI_IDS = list(CONFIG.get("premium_emoji_ids") or PE_NAMES.values())
+LINE_EMOJI_IDS = list(CONFIG.get("line_emoji_ids") or [6285315214673975495, 6257814874085136842])
 FALLBACK = "\u2728"
 SC = str.maketrans(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -46,6 +47,10 @@ def utf16_len(text: str) -> int:
 
 def emoji_id(i: int) -> int:
     return PREMIUM_EMOJI_IDS[i % len(PREMIUM_EMOJI_IDS)] if PREMIUM_EMOJI_IDS else 0
+
+def line_emoji_id(i: int) -> int:
+    ids = LINE_EMOJI_IDS or PREMIUM_EMOJI_IDS
+    return ids[i % len(ids)] if ids else 0
 
 def pe_icon(name: str | None) -> int:
     if name and name in PE_NAMES:
@@ -230,7 +235,7 @@ def rich(text: str, start: int = 0):
             out += "\n"
         off = utf16_len(out)
         out += FALLBACK
-        ents.append(MessageEntityCustomEmoji(off, utf16_len(FALLBACK), emoji_id(n)))
+        ents.append(MessageEntityCustomEmoji(off, utf16_len(FALLBACK), line_emoji_id(n)))
         n += 1
         if line:
             out += " " + line
@@ -256,15 +261,10 @@ async def send_cancel(client, chat_id: int, user_id: int, name: str) -> None:
     label = sc("cancel by ")
     text = FALLBACK + " " + label + name
     ents = [
-        MessageEntityCustomEmoji(0, utf16_len(FALLBACK), pe_icon("back") or emoji_id(0)),
+        MessageEntityCustomEmoji(0, utf16_len(FALLBACK), line_emoji_id(0)),
         MessageEntityMentionName(utf16_len(FALLBACK + " " + label), utf16_len(name), int(user_id)),
     ]
-    result = await botapi("sendMessage", {
-        "chat_id": chat_id,
-        "text": text,
-        "entities": ents_to_api(ents),
-        "link_preview_options": {"is_disabled": True},
-    })
+    result = await botapi("sendMessage", {"chat_id": chat_id, "text": text, "entities": ents_to_api(ents), "link_preview_options": {"is_disabled": True}})
     if result.get("ok"):
         return
     await client.send_message(chat_id, text, formatting_entities=ents, link_preview=False)
@@ -273,7 +273,8 @@ async def edit_say(event, text: str, buttons=None):
     body, ents = rich(text)
     rows = buttons
     markup = markup_json(rows) if dict_rows(rows) else None
-    has_media = bool(getattr(getattr(event, "message", None), "media", None))
+    msg = getattr(event, "message", None)
+    has_media = bool(getattr(msg, "media", None) or getattr(msg, "photo", None))
     payload = {"chat_id": event.chat_id, "message_id": event.message_id}
     if markup:
         payload["reply_markup"] = markup
@@ -288,7 +289,22 @@ async def edit_say(event, text: str, buttons=None):
         result = await botapi("editMessageText", payload)
     if result.get("ok"):
         return result
+    # Keep ONE message: retry opposite method, never send a new chat message.
+    if has_media:
+        payload.pop("caption", None)
+        payload.pop("caption_entities", None)
+        payload["text"] = body
+        payload["entities"] = ents_to_api(ents)
+        payload["link_preview_options"] = {"is_disabled": True}
+        result = await botapi("editMessageText", payload)
+    else:
+        payload.pop("text", None)
+        payload.pop("entities", None)
+        payload["caption"] = body
+        payload["caption_entities"] = ents_to_api(ents)
+        result = await botapi("editMessageCaption", payload)
+    if result.get("ok"):
+        return result
     if markup:
-        await botapi("editMessageReplyMarkup", {"chat_id": event.chat_id, "message_id": event.message_id, "reply_markup": markup})
-    from tools import runtime
-    return await say(runtime.client, event, text, buttons=buttons)
+        return await botapi("editMessageReplyMarkup", {"chat_id": event.chat_id, "message_id": event.message_id, "reply_markup": markup})
+    return result
