@@ -18,17 +18,17 @@
 ## 🚀 Quick Deploy
 
 <p align="center">
-  <a href="https://dashboard.heroku.com/new?template=https://github.com/SIDHIMUSIC/mentionmayabot">
+  <a href="https://dashboard.heroku.com/new?template=https://github.com/SIDHIMUSIC/mentionsidhibot">
     <img src="https://img.shields.io/badge/⚡_Heroku_Deploy-430098?style=for-the-badge&logo=heroku&logoColor=white" alt="Deploy to Heroku">
   </a>
   &nbsp;
-  <a href="https://github.com/SIDHIMUSIC/mentionmayabot">
+  <a href="https://github.com/SIDHIMUSIC/mentionsidhibot">
     <img src="https://img.shields.io/badge/⭐_GitHub_Repo-0D1117?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://dashboard.heroku.com/new?template=https://github.com/SIDHIMUSIC/mentionmayabot">
+  <a href="https://dashboard.heroku.com/new?template=https://github.com/SIDHIMUSIC/mentionsidhibot">
     <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy">
   </a>
 </p>
@@ -49,7 +49,7 @@ Sirf ye 3 khud daalna hai:
 - `/start` pe rotating photos + 4 buttons
 - `/admins` `/bots` `/cancel` `/settings`
 
-Branding file: [`config.py`](https://github.com/SIDHIMUSIC/mentionmayabot/blob/main/config.py)
+Branding file: [`config.py`](https://github.com/SIDHIMUSIC/mentionsidhibot/blob/main/config.py)
 
 ---
 
@@ -75,4 +75,4 @@ Bot ko group **admin** banana zaroori hai.
 heroku ps:scale worker=1
 ```
 
-Repo: https://github.com/SIDHIMUSIC/mentionmayabot
+Repo: https://github.com/SIDHIMUSIC/mentionsidhibot
