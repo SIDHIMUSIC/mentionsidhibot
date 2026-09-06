@@ -1,25 +1,47 @@
 {
-  "name": "MentionMayaBot",
-  "description": "Telegram mention-all bot with admin controls, Hindi/English replies, and Heroku support.",
+  "name": "Mention Bot",
+  "description": "Stylish Telegram mention-all bot with premium emojis, rotating start photos, owner/support/music buttons.",
   "repository": "https://github.com/SIDHIMUSIC/mentionmayabot",
-  "keywords": ["telegram", "bot", "mention", "tagall", "heroku"],
+  "logo": "https://graph.org/file/de732e8e438bd2270fb5c-49eba2969fc27376c6.jpg",
+  "success_url": "/",
+  "keywords": ["telegram", "bot", "mention", "tagall", "heroku", "premium-emoji"],
   "env": {
     "API_ID": {
-      "description": "Telegram API ID from https://my.telegram.org",
+      "description": "Telegram API ID — https://my.telegram.org",
       "required": true
     },
     "API_HASH": {
-      "description": "Telegram API HASH from https://my.telegram.org",
+      "description": "Telegram API HASH — https://my.telegram.org",
       "required": true
     },
     "BOT_TOKEN": {
-      "description": "Bot token from @BotFather",
+      "description": "Bot token — @BotFather",
       "required": true
     },
     "OWNER_ID": {
-      "description": "Your numeric Telegram user ID (optional, for owner commands)",
-      "required": false,
-      "value": "0"
+      "description": "Owner Telegram numeric ID",
+      "value": "8170572505",
+      "required": false
+    },
+    "OWNER_URL": {
+      "description": "Owner button link",
+      "value": "tg://user?id=8170572505",
+      "required": false
+    },
+    "SUPPORT_URL": {
+      "description": "Support channel",
+      "value": "https://t.me/TG_BIO_STYLE",
+      "required": false
+    },
+    "MUSIC_BOT_URL": {
+      "description": "Music bot link",
+      "value": "https://t.me/PRAGYA_ROBOT",
+      "required": false
+    },
+    "START_PHOTOS": {
+      "description": "Start photos (comma separated)",
+      "value": "https://graph.org/file/de732e8e438bd2270fb5c-49eba2969fc27376c6.jpg,https://graph.org/file/0a598b51a872c36d2a9c5-4f4aa6e6de87bea8d6.jpg,https://graph.org/file/556615482003de63f32be-58c192c7e65004f9d4.jpg,https://graph.org/file/89adae0b36f3c7ed61f8a-29971bd09b2b067b9e.jpg,https://graph.org/file/7ba395651519c19b159f9-ec82d50bbe112893b9.jpg",
+      "required": false
     }
   },
   "formation": {
@@ -28,6 +50,7 @@
       "size": "eco"
     }
   },
+  "addons": [],
   "buildpacks": [
     {
       "url": "heroku/python"

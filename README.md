@@ -1,28 +1,78 @@
-# Mention Bot
+<p align="center">
+  <img src="https://graph.org/file/de732e8e438bd2270fb5c-49eba2969fc27376c6.jpg" width="420">
+</p>
 
-Display name BotFather wale bot ka naam se aata hai.
+<h1 align="center">✨ Mention Bot ✨</h1>
 
-Repo: https://github.com/SIDHIMUSIC/mentionmayabot
+<p align="center">
+  <img src="https://img.shields.io/badge/Telegram-Mention-2AABEE?style=for-the-badge&logo=telegram&logoColor=white">
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white">
+  <img src="https://img.shields.io/badge/Heroku-Ready-430098?style=for-the-badge&logo=heroku&logoColor=white">
+  <img src="https://img.shields.io/badge/Premium-Emoji-ff4d6d?style=for-the-badge">
+</p>
 
-Branding ek hi file mein hai: `config.py`
+<p align="center"><b>Deploy ke baad bot ka naam BotFather wale account se aata hai.</b></p>
 
-- owner id / owner button
-- support channel
-- music bot
-- start photos
-- premium emoji IDs
+---
 
-## Commands
+## 🚀 Quick Deploy
 
-`/all` `/tagall` `/everyone` `@all` `#all` `/admins` `/bots` `/cancel` `/settings` `/stats` `/ping` `/help`
+<p align="center">
+  <a href="https://dashboard.heroku.com/new?template=https://github.com/SIDHIMUSIC/mentionmayabot">
+    <img src="https://img.shields.io/badge/⚡_Heroku_Deploy-430098?style=for-the-badge&logo=heroku&logoColor=white" alt="Deploy to Heroku">
+  </a>
+  &nbsp;
+  <a href="https://github.com/SIDHIMUSIC/mentionmayabot">
+    <img src="https://img.shields.io/badge/⭐_GitHub_Repo-0D1117?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
+  </a>
+</p>
 
-## Deploy
+<p align="center">
+  <a href="https://dashboard.heroku.com/new?template=https://github.com/SIDHIMUSIC/mentionmayabot">
+    <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy">
+  </a>
+</p>
+
+Button dabao → Heroku pe **owner / support / music / photos already filled** aayenge.
+Sirf ye 3 khud daalna hai:
+
+- `API_ID` → [my.telegram.org](https://my.telegram.org)
+- `API_HASH` → [my.telegram.org](https://my.telegram.org)
+- `BOT_TOKEN` → [@BotFather](https://t.me/BotFather)
+
+---
+
+## 💎 Features
+
+- `/all` `/tagall` `/everyone` `@all` `#all`
+- Har user ke baad premium custom emoji
+- `/start` pe rotating photos + 4 buttons
+- `/admins` `/bots` `/cancel` `/settings`
+
+Branding file: [`config.py`](https://github.com/SIDHIMUSIC/mentionmayabot/blob/main/config.py)
+
+---
+
+## ⚡ Commands
+
+| Command | Work |
+|---|---|
+| `/start` | Photo + buttons |
+| `/all` | Mention all |
+| `/admins` | Mention admins |
+| `/bots` | List bots |
+| `/cancel` | Stop mention |
+| `/settings` | Group options |
+| `/help` | Help |
+
+Bot ko group **admin** banana zaroori hai.
+
+---
+
+## ☁️ After deploy
 
 ```bash
-heroku create
-heroku config:set API_ID=... API_HASH=... BOT_TOKEN=...
-git push heroku main
 heroku ps:scale worker=1
 ```
 
-MIT.
+Repo: https://github.com/SIDHIMUSIC/mentionmayabot
