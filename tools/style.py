@@ -227,8 +227,14 @@ def sc_keep(text: str) -> str:
     parts.append(sc(text[last:]))
     return "".join(parts)
 
+def _is_start_caption(text: str) -> bool:
+    low = (text or "").lower()
+    return "its me" in low and "smart tag bot" in low
+
 def rich(text: str, start: int = 0):
     text = sc_keep(text)
+    if _is_start_caption(text):
+        return text, []
     out, ents, n = "", [], start
     for i, line in enumerate(text.split("\n")):
         if i:
@@ -289,7 +295,6 @@ async def edit_say(event, text: str, buttons=None):
         result = await botapi("editMessageText", payload)
     if result.get("ok"):
         return result
-    # Keep ONE message: retry opposite method, never send a new chat message.
     if has_media:
         payload.pop("caption", None)
         payload.pop("caption_entities", None)
