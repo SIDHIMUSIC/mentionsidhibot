@@ -30,7 +30,7 @@ PLACE_RE = re.compile(
     re.I,
 )
 BTN_RE = re.compile(r"\[\s*([^\]]+?)\s*\]\(\s*(https?://[^\s)]+)\s*\)")
-SEP_TEXT = "______"
+SEP_TEXT = "________________________"
 welcome_seen: dict[str, float] = {}
 
 UPDATES_URL = CONFIG.get("updates_url") or CONFIG.get("support_url")
@@ -101,7 +101,6 @@ def fill_welcome(template: str, saved_ents, values: dict, user: User):
 
 
 def wrap_welcome(text: str, ents):
-    """emoji NAME emoji then ______ after every content line. Auto + custom."""
     if ents and hasattr(ents[0], "offset"):
         saved = dump_ents(ents)
     else:
