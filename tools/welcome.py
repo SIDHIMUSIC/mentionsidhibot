@@ -30,7 +30,6 @@ PLACE_RE = re.compile(
     re.I,
 )
 BTN_RE = re.compile(r"\[\s*([^\]]+?)\s*\]\(\s*(https?://[^\s)]+)\s*\)")
-SEP_TEXT = "________________________"
 welcome_seen: dict[str, float] = {}
 
 UPDATES_URL = CONFIG.get("updates_url") or CONFIG.get("support_url")
@@ -42,15 +41,15 @@ def default_welcome_buttons():
 
 
 def _left(i: int) -> int:
-    return pe_icon(f"welcome_l{i + 1}") or pe_icon("welcome_line") or pe_icon("welcome")
+    return pe_icon(f"welcome_l{(i % 8) + 1}") or pe_icon("welcome_line") or pe_icon("welcome")
 
 
 def _right(i: int) -> int:
-    return pe_icon(f"welcome_r{i + 1}") or _left(i)
+    return pe_icon(f"welcome_r{(i % 8) + 1}") or _left(i)
 
 
-def _sep(i: int) -> int:
-    return pe_icon(f"sep_{i + 1}") or pe_icon("welcome_line") or _left(i)
+def _sep(n: int) -> int:
+    return pe_icon(f"sep_{n}") or pe_icon("welcome_line") or pe_icon("welcome")
 
 
 def extract_buttons_keep_ents(text: str, saved_ents):
@@ -100,7 +99,19 @@ def fill_welcome(template: str, saved_ents, values: dict, user: User):
     return text, load_ents(ents)
 
 
-def wrap_welcome(text: str, ents):
+def _append_sep_rows(out: str, ents: list) -> str:
+    for row in ((1, 2, 3, 4), (5, 6, 7, 8)):
+        bits = []
+        for n in row:
+            off = utf16_len(out + "".join(bits))
+            bits.append(FALLBACK)
+            ents.append({"t": "emoji", "off": off, "len": utf16_len(FALLBACK), "id": int(_sep(n))})
+            bits.append(" ")
+        out += "".join(bits).rstrip() + "\n"
+    return out
+
+
+def wrap_welcome(text: str, ents, add_right: bool = True):
     if ents and hasattr(ents[0], "offset"):
         saved = dump_ents(ents)
     else:
@@ -114,29 +125,27 @@ def wrap_welcome(text: str, ents):
         nxt = cursor + len(raw)
         if raw.strip():
             left = FALLBACK + " "
-            right = " " + FALLBACK
-            sep = FALLBACK + " " + SEP_TEXT
+            right = (" " + FALLBACK) if add_right else ""
             chunk = left + raw + right
             base = utf16_len(out)
             new_ents.append({"t": "emoji", "off": base, "len": utf16_len(FALLBACK), "id": int(_left(line_i))})
+            start16 = utf16_len(text[:cursor])
+            end16 = utf16_len(text[:nxt])
             for item in saved:
                 off = int(item.get("off", 0))
-                start16 = utf16_len(text[:cursor])
-                end16 = utf16_len(text[:nxt])
                 if start16 <= off < end16:
                     cur = dict(item)
                     cur["off"] = off - start16 + base + utf16_len(left)
                     new_ents.append(cur)
-            new_ents.append({
-                "t": "emoji",
-                "off": base + utf16_len(left + raw + " "),
-                "len": utf16_len(FALLBACK),
-                "id": int(_right(line_i)),
-            })
+            if add_right:
+                new_ents.append({
+                    "t": "emoji",
+                    "off": base + utf16_len(left + raw + " "),
+                    "len": utf16_len(FALLBACK),
+                    "id": int(_right(line_i)),
+                })
             out += chunk + "\n"
-            sep_off = utf16_len(out)
-            new_ents.append({"t": "emoji", "off": sep_off, "len": utf16_len(FALLBACK), "id": int(_sep(line_i))})
-            out += sep + "\n"
+            out = _append_sep_rows(out, new_ents)
             line_i += 1
         cursor = nxt + 1
     return out.rstrip(), load_ents(new_ents)
@@ -189,7 +198,7 @@ async def send_welcome(client, chat_id: int, user: User, title: str = "", force:
     raw, extra_btns, raw_ents = extract_buttons_keep_ents(raw, s.get("welcome_entities") if custom else [])
     values = {"first_name": first, "username": uname, "id": str(user.id), "chatname": title or "group"}
     text, ents = fill_welcome(raw, raw_ents or [], values, user)
-    text, ents = wrap_welcome(text, ents)
+    text, ents = wrap_welcome(text, ents, add_right=not custom)
     if s.get("cleanwelcome") and s.get("welcome_last") and not force:
         try:
             await client.delete_messages(chat_id, int(s["welcome_last"]))
