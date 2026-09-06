@@ -19,8 +19,12 @@ from telethon.tl.functions.channels import GetParticipantRequest
 from telethon.tl.types import (
     ChannelParticipantAdmin,
     ChannelParticipantCreator,
+    MessageEntityCustomEmoji,
+    MessageEntityTextUrl,
     User,
 )
+
+from config import CONFIG
 
 load_dotenv()
 
@@ -33,24 +37,15 @@ log = logging.getLogger("mentionbot")
 API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-OWNER_ID = int(os.getenv("OWNER_ID", "0") or 0)
 PORT = int(os.getenv("PORT", "0") or 0)
 
-OWNER_URL = os.getenv("OWNER_URL", "https://t.me/your_owner")
-SUPPORT_URL = os.getenv("SUPPORT_URL", "https://t.me/your_support")
-MUSIC_BOT_URL = os.getenv("MUSIC_BOT_URL", "https://t.me/your_music_bot")
-START_PHOTOS = [
-    p.strip()
-    for p in os.getenv("START_PHOTOS", "").replace("\n", ",").split(",")
-    if p.strip()
-]
-
-PREMIUM_EMOJIS = [
-    "\U0001f48e", "\U0001f98b", "\U0001f338", "\u2728", "\U0001f319", "\u26a1", "\U0001f525", "\U0001f49c", "\U0001fa77", "\U0001fa75",
-    "\U0001f9f8", "\U0001f380", "\U0001f9a2", "\U0001f33a", "\U0001f4ab", "\U0001f9ff", "\U0001f90d", "\U0001f5a4", "\u2b50", "\U0001f31f",
-    "\U0001fae7", "\U0001faa9", "\U0001fa70", "\U0001fa9e", "\U0001f451", "\U0001f48d", "\U0001f54a", "\U0001f337", "\U0001f33c", "\U0001f308",
-    "\u2744", "\U0001f30a", "\U0001fa90",
-]
+OWNER_ID = int(CONFIG["owner_id"])
+OWNER_URL = CONFIG["owner_url"]
+SUPPORT_URL = CONFIG["support_url"]
+MUSIC_BOT_URL = CONFIG["music_bot_url"]
+START_PHOTOS = list(CONFIG["start_photos"])
+PREMIUM_EMOJI_IDS = list(CONFIG["premium_emoji_ids"])
+FALLBACK_EMOJI = "\u2728"
 
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -113,35 +108,70 @@ last_run: dict[int, float] = {}
 stats = {"mentions_sent": 0, "jobs": 0}
 
 
-def pick_emoji(index: int) -> str:
-    return PREMIUM_EMOJIS[index % len(PREMIUM_EMOJIS)]
+def utf16_len(text: str) -> int:
+    return len(text.encode("utf-16-le")) // 2
+
+
+def pick_emoji_id(index: int) -> int:
+    return PREMIUM_EMOJI_IDS[index % len(PREMIUM_EMOJI_IDS)]
+
+
+def build_mention_message(header: str, users: list[User], show_name: bool, start_index: int):
+    text = header + "\n\n"
+    entities = []
+    for idx, user in enumerate(users):
+        name = (user.first_name or "member").replace("]", "").replace("[", "")
+        if not show_name:
+            name = "\u2661"
+        if idx:
+            text += " "
+        name_offset = utf16_len(text)
+        text += name
+        entities.append(
+            MessageEntityTextUrl(
+                offset=name_offset,
+                length=utf16_len(name),
+                url=f"tg://user?id={user.id}",
+            )
+        )
+        text += " "
+        emoji_offset = utf16_len(text)
+        text += FALLBACK_EMOJI
+        entities.append(
+            MessageEntityCustomEmoji(
+                offset=emoji_offset,
+                length=utf16_len(FALLBACK_EMOJI),
+                document_id=pick_emoji_id(start_index + idx),
+            )
+        )
+    return text, entities
 
 
 def start_caption() -> str:
     handle = f"@{ME_USERNAME}" if ME_USERNAME else bot_name()
     return (
         f"\u2728 Welcome to {bot_name()} \u2728\n"
-        f"\U0001f48e {handle}\n\n"
-        "\U0001f98b Group ke saare members ko stylish mention\n"
-        "\U0001f338 `/all`  `/tagall`  `/everyone`\n"
-        "\U0001f4ab Group mein `@all` ya `#all` bhi chalega\n"
-        "\U0001f451 `/admins`  \u00b7  \U0001f9f8 `/bots`  \u00b7  \u26a1 `/cancel`\n\n"
-        "\U0001faa9 Bot ko group **admin** banao, phir tag shuru.\n"
-        "\U0001f90d Help: `/help`"
+        f"{handle}\n\n"
+        "Group ke saare members ko stylish mention\n"
+        "`/all`  `/tagall`  `/everyone`\n"
+        "Group mein `@all` ya `#all` bhi chalega\n"
+        "`/admins`  `/bots`  `/cancel`\n\n"
+        "Bot ko group **admin** banao, phir tag shuru.\n"
+        "Help: `/help`"
     )
 
 
 def help_text() -> str:
     return (
-        f"\U0001f48e **{bot_name()} commands** \U0001f48e\n\n"
-        "\u2728 `/all` `/tagall` `/everyone` `[text]`\n"
-        "\U0001f98b `@all` `#all` `@everyone`\n"
-        "\U0001f451 `/admins` \u2014 sirf admins\n"
-        "\U0001f9f8 `/bots` \u2014 group bots\n"
-        "\u26a1 `/cancel` `/stop`\n"
-        "\U0001fa9e `/settings` \u2014 admin_only / cooldown / batch / names\n"
-        "\U0001f31f `/stats` `/ping` `/help`\n\n"
-        "\U0001f338 Har member ke baad premium emoji lagta hai."
+        f"**{bot_name()} commands**\n\n"
+        "`/all` `/tagall` `/everyone` `[text]`\n"
+        "`@all` `#all` `@everyone`\n"
+        "`/admins` \u2014 sirf admins\n"
+        "`/bots` \u2014 group bots\n"
+        "`/cancel` `/stop`\n"
+        "`/settings` \u2014 admin_only / cooldown / batch / names\n"
+        "`/stats` `/ping` `/help`\n\n"
+        "Har member ke baad premium emoji lagta hai."
     )
 
 
@@ -177,14 +207,6 @@ async def is_admin(chat, user_id: int) -> bool:
     )
 
 
-def mention_link(user: User, show_name: bool, index: int) -> str:
-    name = (user.first_name or "member").replace("]", "").replace("[", "")
-    if not show_name:
-        name = "\u2661"
-    emoji = pick_emoji(index)
-    return f"[{name}](tg://user?id={user.id}) {emoji}"
-
-
 async def collect_members(chat, kind: str) -> list[User]:
     members: list[User] = []
     async for user in client.iter_participants(chat):
@@ -210,12 +232,12 @@ async def run_mention(event, kind: str, extra_text: str) -> None:
     chat_id = event.chat_id
     sender = await event.get_sender()
     if event.is_private:
-        await event.reply("\U0001f48e Ye command sirf **group** mein chalti hai.")
+        await event.reply("Ye command sirf **group** mein chalti hai.")
         return
 
     settings = chat_settings(chat_id)
     if settings["admin_only"] and not await is_admin(chat, sender.id):
-        await event.reply("\U0001f451 Sirf **admins** mention chala sakte hain.")
+        await event.reply("Sirf **admins** mention chala sakte hain.")
         return
 
     wait = settings["cooldown"] - (time.time() - last_run.get(chat_id, 0))
@@ -224,7 +246,7 @@ async def run_mention(event, kind: str, extra_text: str) -> None:
         return
 
     if chat_id in active_jobs:
-        await event.reply("\u26a1 Pehle se mention chal raha hai. `/cancel`")
+        await event.reply("Pehle se mention chal raha hai. `/cancel`")
         return
 
     active_jobs.add(chat_id)
@@ -239,7 +261,7 @@ async def run_mention(event, kind: str, extra_text: str) -> None:
         active_jobs.discard(chat_id)
         log.exception("member fetch failed")
         await event.reply(
-            "\U0001f338 Members nahi mile. Bot ko **admin** banao.\n"
+            "Members nahi mile. Bot ko **admin** banao.\n"
             f"`{type(exc).__name__}`"
         )
         return
@@ -249,36 +271,37 @@ async def run_mention(event, kind: str, extra_text: str) -> None:
         await event.reply("Koi eligible member nahi mila.")
         return
 
-    header = extra_text.strip() if extra_text.strip() else f"\u2728 {bot_name()} \u2014 sab yahan aao \u2728"
+    header = extra_text.strip() if extra_text.strip() else f"{bot_name()} \u2014 sab yahan aao"
     status = await event.reply(
-        f"\U0001f48e Mention start \u2014 **{len(members)}**  \u00b7  batch `{batch}`\n\u26a1 rokne ke liye `/cancel`"
+        f"Mention start \u2014 **{len(members)}**  \u00b7  batch `{batch}`\nrokne ke liye `/cancel`"
     )
 
     sent = 0
     try:
         for i in range(0, len(members), batch):
             if chat_id not in active_jobs:
-                await event.reply("\u26a1 Mention **cancel** ho gaya.")
+                await event.reply("Mention **cancel** ho gaya.")
                 return
             chunk = members[i : i + batch]
-            tags = " ".join(
-                mention_link(user, show_name, i + idx) for idx, user in enumerate(chunk)
-            )
-            body = f"{header}\n\n{tags}"
+            body, entities = build_mention_message(header, chunk, show_name, i)
             try:
-                await client.send_message(chat_id, body, link_preview=False)
+                await client.send_message(
+                    chat_id, body, formatting_entities=entities, link_preview=False
+                )
                 sent += len(chunk)
                 stats["mentions_sent"] += len(chunk)
             except FloodWaitError as flood:
                 log.warning("FloodWait %ss", flood.seconds)
                 await asyncio.sleep(flood.seconds + 1)
-                await client.send_message(chat_id, body, link_preview=False)
+                await client.send_message(
+                    chat_id, body, formatting_entities=entities, link_preview=False
+                )
                 sent += len(chunk)
             await asyncio.sleep(1.6)
     finally:
         active_jobs.discard(chat_id)
 
-    done = f"\U0001f338 Done \u2728  {sent}/{len(members)} mention ho gaye."
+    done = f"Done  {sent}/{len(members)} mention ho gaye."
     try:
         await status.edit(done)
     except Exception:
@@ -315,7 +338,7 @@ async def ping_handler(event):
     t0 = time.perf_counter()
     msg = await event.reply("pong...")
     ms = (time.perf_counter() - t0) * 1000
-    await msg.edit(f"\u26a1 pong `{ms:.0f}ms`")
+    await msg.edit(f"pong `{ms:.0f}ms`")
 
 
 @client.on(events.NewMessage(pattern=r"^/(stats)(@\w+)?"))
@@ -323,11 +346,11 @@ async def stats_handler(event):
     settings = chat_settings(event.chat_id)
     running = "haan" if event.chat_id in active_jobs else "nahi"
     await event.reply(
-        f"\U0001f48e **{bot_name()} stats**\n"
-        f"\u2728 Jobs: `{stats['jobs']}`\n"
-        f"\U0001f98b Mentions: `{stats['mentions_sent']}`\n"
-        f"\u26a1 Running: `{running}`\n"
-        f"\U0001f451 admin_only: `{settings['admin_only']}`\n"
+        f"**{bot_name()} stats**\n"
+        f"Jobs: `{stats['jobs']}`\n"
+        f"Mentions: `{stats['mentions_sent']}`\n"
+        f"Running: `{running}`\n"
+        f"admin_only: `{settings['admin_only']}`\n"
         f"cooldown: `{settings['cooldown']}s`\n"
         f"batch: `{settings['batch']}`"
     )
@@ -340,11 +363,11 @@ async def cancel_handler(event):
     chat = await event.get_chat()
     sender = await event.get_sender()
     if chat_settings(event.chat_id)["admin_only"] and not await is_admin(chat, sender.id):
-        await event.reply("\U0001f451 Cancel ke liye admin hona chahiye.")
+        await event.reply("Cancel ke liye admin hona chahiye.")
         return
     if event.chat_id in active_jobs:
         active_jobs.discard(event.chat_id)
-        await event.reply("\u26a1 Mention stop.")
+        await event.reply("Mention stop.")
     else:
         await event.reply("Koi mention chal nahi raha.")
 
@@ -373,7 +396,7 @@ async def settings_handler(event):
         return
 
     if not await is_admin(chat, sender.id):
-        await event.reply("\U0001f451 Settings sirf admin badal sakta hai.")
+        await event.reply("Settings sirf admin badal sakta hai.")
         return
 
     args = [p for p in parts[1:] if not p.startswith("@")]
@@ -411,7 +434,7 @@ async def settings_handler(event):
         return
 
     await event.reply(
-        "\u2728 Updated\n"
+        "Updated\n"
         f"`admin_only={s['admin_only']}` `cooldown={s['cooldown']}` "
         f"`batch={s['batch']}` `names={s['names']}`"
     )
@@ -441,12 +464,12 @@ async def admins_cmd(event):
     bits = raw.split(maxsplit=1)
     if len(bits) > 1 and not bits[1].startswith("@"):
         extra = bits[1]
-    await run_mention(event, "admins", extra or "\U0001f451 Admins needed")
+    await run_mention(event, "admins", extra or "Admins needed")
 
 
 @client.on(events.NewMessage(pattern=r"^/(bots)(@\w+)?"))
 async def bots_cmd(event):
-    await run_mention(event, "bots", "\U0001f9f8 Group bots")
+    await run_mention(event, "bots", "Group bots")
 
 
 @client.on(events.NewMessage(incoming=True))
