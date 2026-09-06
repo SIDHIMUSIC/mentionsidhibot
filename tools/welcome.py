@@ -8,14 +8,15 @@ import time
 
 from telethon.tl.types import User
 
+from config import CONFIG
 from tools.store import DATA_DIR, DEFAULT_WELCOME, gset, uset
 from tools.style import (
     FALLBACK,
     btn,
     botapi,
     dump_ents,
-    emoji_id,
     ents_to_api,
+    line_emoji_id,
     load_ents,
     markup_json,
     shift_saved_ents,
@@ -30,6 +31,16 @@ PLACE_RE = re.compile(
 )
 BTN_RE = re.compile(r"\[([^\]]+)\]\((https?://[^\s)]+)\)")
 welcome_seen: dict[str, float] = {}
+
+UPDATES_URL = CONFIG.get("updates_url") or CONFIG.get("support_url")
+SUPPORT_URL = CONFIG.get("support_url")
+
+
+def default_welcome_buttons():
+    return [
+        [btn("updates", url=UPDATES_URL, pe_name="updates")],
+        [btn("support", url=SUPPORT_URL, pe_name="support")],
+    ]
 
 
 def fill_welcome(template: str, saved_ents, values: dict, user: User):
@@ -47,7 +58,7 @@ def fill_welcome(template: str, saved_ents, values: dict, user: User):
         extra = None
         if key == "mention":
             repl = values["first_name"]
-            extra = {"t": "url", "off": start16, "len": utf16_len(repl), "url": f"tg://user?id={user.id}"}
+            extra = {"t": "mention", "off": start16, "len": utf16_len(repl), "uid": int(user.id)}
         elif key == "username":
             repl = values["username"]
         elif key in {"first_name", "name"}:
@@ -83,7 +94,7 @@ def add_line_premium(text: str, ents):
         piece = FALLBACK + " "
         text = text[:start] + piece + text[start:]
         saved = shift_saved_ents(saved, start16, 0, utf16_len(piece))
-        saved.append({"t": "emoji", "off": start16, "len": utf16_len(FALLBACK), "id": emoji_id(max(n, 0))})
+        saved.append({"t": "emoji", "off": start16, "len": utf16_len(FALLBACK), "id": line_emoji_id(max(n, 0))})
         n -= 1
     return text, load_ents(saved)
 
@@ -106,13 +117,13 @@ async def grab_welcome_media(client, chat_id: int, message) -> str:
 
 
 def parse_welcome_buttons(items):
-    if not items:
-        return None
-    row = []
-    for item in items[:6]:
+    rows = []
+    for item in (items or [])[:8]:
         if isinstance(item, dict) and item.get("url"):
-            row.append(btn(item.get("text") or "link", url=item["url"], pe_name="add"))
-    return [row] if row else None
+            name = (item.get("text") or "link").strip().lower()
+            pe = "updates" if "update" in name else "support" if "support" in name else "add"
+            rows.append([btn(item.get("text") or "link", url=item["url"], pe_name=pe)])
+    return rows or default_welcome_buttons()
 
 
 async def send_welcome(client, chat_id: int, user: User, title: str = "", force: bool = False) -> None:
@@ -131,35 +142,36 @@ async def send_welcome(client, chat_id: int, user: User, title: str = "", force:
     values = {"first_name": first, "username": uname, "id": str(user.id), "chatname": title or "group"}
     saved = s.get("welcome_entities") if custom else []
     text, ents = fill_welcome(raw, saved or [], values, user)
-    if custom:
-        text, ents = add_line_premium(text, ents)
+    text, ents = add_line_premium(text, ents)
     if s.get("cleanwelcome") and s.get("welcome_last") and not force:
         try:
             await client.delete_messages(chat_id, int(s["welcome_last"]))
         except Exception:
             pass
-    btns = parse_welcome_buttons(s.get("welcome_buttons") or [])
+    saved_btns = s.get("welcome_buttons") or []
+    btns = parse_welcome_buttons(saved_btns)
     media = s.get("welcome_media") or ""
     try:
         payload = {"chat_id": chat_id}
         if media and str(media).startswith("http"):
-            payload.update({"photo": media, "caption": text, "caption_entities": ents_to_api(ents)})
-            if btns:
-                payload["reply_markup"] = markup_json(btns)
+            payload.update({"photo": media, "caption": text, "caption_entities": ents_to_api(ents), "reply_markup": markup_json(btns)})
             result = await botapi("sendPhoto", payload)
         else:
-            payload.update({"text": text, "entities": ents_to_api(ents), "link_preview_options": {"is_disabled": True}})
-            if btns:
-                payload["reply_markup"] = markup_json(btns)
+            payload.update({
+                "text": text,
+                "entities": ents_to_api(ents),
+                "link_preview_options": {"is_disabled": True},
+                "reply_markup": markup_json(btns),
+            })
             result = await botapi("sendMessage", payload)
         if result.get("ok"):
             if not force:
                 uset(chat_id, welcome_last=result["result"]["message_id"])
             return
         if media:
-            msg = await client.send_file(chat_id, media, caption=text, formatting_entities=ents, buttons=tele_buttons(btns) if btns else None)
+            msg = await client.send_file(chat_id, media, caption=text, formatting_entities=ents, buttons=tele_buttons(btns))
         else:
-            msg = await client.send_message(chat_id, text, formatting_entities=ents, buttons=tele_buttons(btns) if btns else None, link_preview=False)
+            msg = await client.send_message(chat_id, text, formatting_entities=ents, buttons=tele_buttons(btns), link_preview=False)
         if not force:
             uset(chat_id, welcome_last=msg.id)
     except Exception as exc:
