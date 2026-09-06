@@ -3,7 +3,10 @@
 ARROW_EMOJI = 6285315214673975495
 BORROW_EMOJI = 6257814874085136842
 
-# Line prefix in every description uses only these two, one after another.
+# Replace these when you send new IDs.
+START_LINE_EMOJI = 5224736245665511429
+WELCOME_LINE_EMOJI = 6127555770197219915
+
 LINE_EMOJI_IDS = [ARROW_EMOJI, BORROW_EMOJI]
 
 PE_NAMES = {
@@ -21,6 +24,8 @@ PE_NAMES = {
     "settings": 5461117441612462242,
     "security": 5424972470023104089,
     "start": 5224736245665511429,
+    "start_line": START_LINE_EMOJI,
+    "welcome_line": WELCOME_LINE_EMOJI,
     "back": 5215377245639549895,
     "on": 6025929233291809651,
     "off": 6026088864341299395,
@@ -61,4 +66,6 @@ CONFIG = {
     "line_emoji_ids": LINE_EMOJI_IDS,
     "arrow_emoji": ARROW_EMOJI,
     "borrow_emoji": BORROW_EMOJI,
+    "start_line_emoji": START_LINE_EMOJI,
+    "welcome_line_emoji": WELCOME_LINE_EMOJI,
 }
