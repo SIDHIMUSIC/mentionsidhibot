@@ -12,131 +12,209 @@ UPDATES_URL = CONFIG.get("updates_url", SUPPORT_URL)
 
 def start_caption() -> str:
     from tools.runtime import bot_name, ME_USERNAME as handle
-
     tag = f"@{handle}" if handle else bot_name()
     return (
-        f"ɪᴛꜱ ᴍᴇ — {bot_name()}\n"
+        f"its me - {bot_name()}\n"
         f"{tag}\n\n"
-        "ꜱᴍᴀʀᴛ ᴛᴀɢ ʙᴏᴛ ғᴏʀ ɢʀᴏᴜᴘꜱ\n"
-        "ᴘʀᴇᴍɪᴜᴍ ᴛᴀɢ + ɢᴀᴍᴇꜱ + ɢᴜᴀʀᴅ\n"
-        "ᴀᴅᴅ ɪɴ ɢʀᴏᴜᴘ · ᴍᴀᴋᴇ ᴀᴅᴍɪɴ · ᴜꜱᴇ /uᴛᴀɢ"
+        "smart tag bot for groups\n"
+        "premium tag + games + guard\n"
+        "add in group\n"
+        "make admin\n"
+        "use /utag"
     )
 
 
 def help_home() -> str:
     return (
-        "ʜᴇʟᴘ ᴄᴇɴᴛᴇʀ — ꜱᴇʟᴇᴄᴛ ᴄᴀᴛᴇɢᴏʀʏ\n\n"
-        "ᴛᴀɢ ꜱʏꜱᴛᴇᴍ — ᴍᴇᴍʙᴇʀꜱ & ᴀᴅᴍɪɴꜱ ᴛᴀɢ\n"
-        "ᴄᴏᴜᴘʟᴇꜱ — 24ʜ / ᴘᴇʀᴍ ᴄᴏᴜᴘʟᴇ ꜱᴇᴛ\n"
-        "ɢᴀᴍᴇꜱ — ᴛʀᴜᴛʜ ᴅᴀʀᴇ ꜱᴘɪɴ ʟᴏᴠᴇ\n"
-        "ᴜꜱᴇʀ ᴛᴏᴏʟꜱ — ɪᴅ ᴘɪɴɢ ᴀғᴋ ꜱᴛᴀᴛꜱ\n"
-        "ᴡᴇʟᴄᴏᴍᴇ — ɴᴇᴡ ᴍᴇᴍʙᴇʀ ᴍꜱɢ ᴏɴ/ᴏꜱꜱ\n"
-        "ꜱᴇᴛᴛɪɴɢꜱ — ɢʀᴏᴜᴘ ᴛᴀɢ ᴏᴘᴛɪᴏɴꜱ\n"
-        "ꜱᴇᴄᴜʀɪᴛʏ ɢᴜᴀʀᴅ — 14 ᴘʀᴏᴛᴇᴄᴛ ᴍᴏᴅᴜʟᴇꜱ"
+        "help center\n"
+        "select category\n\n"
+        "tag system\n"
+        "couples\n"
+        "games\n"
+        "user tools\n"
+        "welcome\n"
+        "settings\n"
+        "security guard"
     )
 
 
 def start_buttons():
     from tools.runtime import ME_USERNAME as handle
-
     add_url = f"https://t.me/{handle}?startgroup=true" if handle else SUPPORT_URL
     return [
-        [btn("ʜᴇʟᴘ", callback_data="menu:help", pe_name="help")],
-        [btn("ᴀᴅᴅ ᴛᴏ ɢʀᴏᴜᴘ", url=add_url, pe_name="add")],
-        [
-            btn("ѕᴜᴘᴘᴏʀᴛ", url=SUPPORT_URL, pe_name="support"),
-            btn("ᴏᴡɴᴇʀ", url=OWNER_URL, pe_name="owner"),
-        ],
-        [
-            btn("ɢᴀᴍᴇ", callback_data="menu:games", pe_name="game"),
-            btn("ᴜᴘᴅᴀᴛᴇꜱ", url=UPDATES_URL, pe_name="updates"),
-        ],
-        [btn("ᴍᴜꜱɪᴄ ʙᴏᴛ", url=MUSIC_BOT_URL, pe_name="music")],
+        [btn("help", callback_data="menu:help", pe_name="help")],
+        [btn("add to group", url=add_url, pe_name="add")],
+        [btn("support", url=SUPPORT_URL, pe_name="support"), btn("owner", url=OWNER_URL, pe_name="owner")],
+        [btn("game", callback_data="menu:games", pe_name="game"), btn("updates", url=UPDATES_URL, pe_name="updates")],
+        [btn("music bot", url=MUSIC_BOT_URL, pe_name="music")],
     ]
 
 
 def help_buttons():
     return [
-        [
-            btn("ᴛᴀɢ ꜱʏꜱᴛᴇᴍ", callback_data="menu:tag", pe_name="tag"),
-            btn("ᴄᴏᴜᴘʟᴇꜱ", callback_data="menu:couples", pe_name="couples"),
-        ],
-        [
-            btn("ɢᴀᴍᴇꜱ", callback_data="menu:games", pe_name="game"),
-            btn("ᴜꜱᴇʀ ᴛᴏᴏʟꜱ", callback_data="menu:tools", pe_name="tools"),
-        ],
-        [
-            btn("ᴡᴇʟᴄᴏᴍᴇ", callback_data="menu:welcome", pe_name="welcome"),
-            btn("ꜱᴇᴛᴛɪɴɢꜱ", callback_data="menu:gset", pe_name="settings"),
-        ],
-        [btn("ꜱᴇᴄᴜʀɪᴛʏ ɢᴜᴀʀᴅ", callback_data="menu:security", pe_name="security")],
-        [btn("ʙᴀᴄᴋ ᴛᴏ ꜱᴛᴀʀᴛ", callback_data="menu:start", pe_name="start")],
+        [btn("tag system", callback_data="menu:tag", pe_name="tag"), btn("couples", callback_data="menu:couples", pe_name="couples")],
+        [btn("games", callback_data="menu:games", pe_name="game"), btn("user tools", callback_data="menu:tools", pe_name="tools")],
+        [btn("welcome", callback_data="menu:welcome", pe_name="welcome"), btn("settings", callback_data="menu:gset", pe_name="settings")],
+        [btn("security guard", callback_data="menu:security", pe_name="security")],
+        [btn("back to start", callback_data="menu:start", pe_name="start")],
     ]
 
 
 def guard_buttons():
     return [
-        [btn("ᴀɴᴛɪ-ᴄʜᴇᴀᴛᴇʀ", callback_data="sec:anticheat", pe_name="anticheat"), btn("ᴀʙᴜꜱᴇ", callback_data="sec:abuse", pe_name="abuse")],
-        [btn("ᴀᴘᴘʀᴏᴠᴀʟꜱ", callback_data="sec:approve", pe_name="approve"), btn("ʙɪᴏᴍᴏᴅᴇ", callback_data="sec:biolink", pe_name="biolink")],
-        [btn("ᴍꜱɢᴅᴇʟᴇᴛᴇ", callback_data="sec:msgdel", pe_name="msgdel"), btn("ᴇᴅɪᴛ", callback_data="sec:edit", pe_name="edit")],
-        [btn("ʟɪɴᴋꜱ", callback_data="sec:links", pe_name="links"), btn("ʟᴏɴɢᴍᴏᴅᴇ", callback_data="sec:long", pe_name="long")],
-        [btn("ᴍᴇᴅɪᴀ", callback_data="sec:media", pe_name="media"), btn("ʙᴏᴛᴘʀᴏᴍᴏ", callback_data="sec:promo", pe_name="promo")],
-        [btn("ғᴏʀᴡᴀʀᴅ", callback_data="sec:fwd", pe_name="fwd"), btn("ʜᴀꜱʜᴛᴀɢꜱ", callback_data="sec:hash", pe_name="hash")],
-        [btn("ᴘʜᴏɴᴇ", callback_data="sec:phone", pe_name="phone"), btn("ᴍᴜᴛᴇ & ᴡᴀʀɴ", callback_data="sec:mute", pe_name="mute")],
-        [btn("ʙᴀᴄᴋ ᴛᴏ ʜᴇʟᴘ", callback_data="menu:help", pe_name="back", style="success")],
+        [btn("anti-cheater", callback_data="sec:anticheat", pe_name="anticheat"), btn("abuse", callback_data="sec:abuse", pe_name="abuse")],
+        [btn("approvals", callback_data="sec:approve", pe_name="approve"), btn("biomode", callback_data="sec:biolink", pe_name="biolink")],
+        [btn("msgdelete", callback_data="sec:msgdel", pe_name="msgdel"), btn("edit", callback_data="sec:edit", pe_name="edit")],
+        [btn("links", callback_data="sec:links", pe_name="links"), btn("longmode", callback_data="sec:long", pe_name="long")],
+        [btn("media", callback_data="sec:media", pe_name="media"), btn("botpromo", callback_data="sec:promo", pe_name="promo")],
+        [btn("forward", callback_data="sec:fwd", pe_name="fwd"), btn("hashtags", callback_data="sec:hash", pe_name="hash")],
+        [btn("phone", callback_data="sec:phone", pe_name="phone"), btn("mute & warn", callback_data="sec:mute", pe_name="mute")],
+        [btn("back to help", callback_data="menu:help", pe_name="back")],
     ]
 
 
 def nav_row():
-    return [[btn("ʙᴀᴄᴋ ᴛᴏ ʜᴇʟᴘ", callback_data="menu:help", pe_name="back"), btn("ꜱᴛᴀʀᴛ", callback_data="menu:start", pe_name="start")]]
+    return [[btn("back to help", callback_data="menu:help", pe_name="back"), btn("start", callback_data="menu:start", pe_name="start")]]
 
 
 def welcome_buttons():
     return [
-        [btn("ᴡᴇʟᴄᴏᴍᴇ ᴏɴ", callback_data="do:welcome_on", pe_name="on", style="success"), btn("ᴡᴇʟᴄᴏᴍᴇ ᴏꜱꜱ", callback_data="do:welcome_off", pe_name="off", style="danger")],
-        [btn("ᴄʟᴇᴀɴ ᴏɴ", callback_data="do:clean_on", pe_name="clean"), btn("ᴄʟᴇᴀɴ ᴏꜱꜱ", callback_data="do:clean_off", pe_name="clean")],
+        [btn("welcome on", callback_data="do:welcome_on", pe_name="on"), btn("welcome off", callback_data="do:welcome_off", pe_name="off")],
+        [btn("clean on", callback_data="do:clean_on", pe_name="clean"), btn("clean off", callback_data="do:clean_off", pe_name="clean")],
         *nav_row(),
     ]
 
 
 def back_help():
-    return [[btn("ꜱᴇᴄᴜʀɪᴛʏ", callback_data="menu:security", pe_name="security"), btn("ʙᴀᴄᴋ ᴛᴏ ʜᴇʟᴘ", callback_data="menu:help", pe_name="back")]]
+    return [[btn("security", callback_data="menu:security", pe_name="security"), btn("back to help", callback_data="menu:help", pe_name="back")]]
 
 
 def onoff(flag: bool) -> str:
-    return sc("ᴏɴ") if flag else sc("ᴏꜱꜱ")
+    return sc("on") if flag else sc("off")
 
+
+TAG_HELP = (
+    "tag system\n"
+    "/utag\n"
+    "/tagall\n"
+    "/everyone\n"
+    "@all\n"
+    "/atag\n"
+    "/admins\n"
+    "@admins\n"
+    "/bots\n"
+    "/cancel\n"
+    "/speed turbo\n"
+    "/speed fast\n"
+    "/speed normal\n"
+    "/speed slow"
+)
+
+COUPLES_HELP = (
+    "couples\n"
+    "/couple\n"
+    "/pcouple\n"
+    "/mycouple\n"
+    "/breakup\n"
+    "/flirt"
+)
+
+GAMES_HELP = (
+    "games\n"
+    "/truth\n"
+    "/dare\n"
+    "/tod\n"
+    "/spin\n"
+    "/love"
+)
+
+TOOLS_HELP = (
+    "user tools\n"
+    "/id\n"
+    "/ping\n"
+    "/afk"
+)
+
+GSET_HELP = (
+    "group settings\n"
+    "/settings\n"
+    "/speed 2\n"
+    "/welcome on\n"
+    "/welcome off"
+)
+
+SECURITY_HELP = (
+    "security guard\n"
+    "anti-cheater\n"
+    "abuse\n"
+    "approvals\n"
+    "biomode\n"
+    "edit\n"
+    "links\n"
+    "longmode\n"
+    "media\n"
+    "botpromo\n"
+    "forward\n"
+    "hashtags\n"
+    "phone\n"
+    "mute warn"
+)
 
 WELCOME_HELP = (
-    "ᴡᴇʟᴄᴏᴍᴇ ꜱʏꜱᴛᴇᴍ\n\n"
-    "» ᴄᴏᴍᴍᴀɴᴅꜱ\n"
-    "• /setwelcome — ꜱᴇᴛ ᴡᴇʟᴄᴏᴍᴇ ᴍᴇꜱꜱᴀɢᴇ\n"
-    "• /welcome on/off — ᴇɴᴀʙʟᴇ ᴏʀ ᴅɪꜱᴀʙʟᴇ ᴡᴇʟᴄᴏᴍᴇꜱ\n"
-    "• /cleanwelcome on/off — ᴅᴇʟᴇᴛᴇ ᴏʟᴅ ᴡᴇʟᴄᴏᴍᴇꜱ\n\n"
-    "» ꜱᴜᴘᴘᴏʀᴛᴇᴅ ᴘʟᴀᴄᴇʜᴏʟᴅᴇʀꜱ\n"
-    "• {first_name} → ᴜꜱᴇʀ ғɪʀꜱᴛ ɴᴀᴍᴇ\n"
-    "• {username} → @username\n"
-    "• {id} → ᴜꜱᴇʀ ɪᴅ\n"
-    "• {mention} → ᴄʟɪᴄᴋᴀʙʟᴇ ᴍᴇɴᴛɪᴏɴ\n"
-    "• {title} → ɢʀᴏᴜᴘ ɴᴀᴍᴇ\n"
-    "• {chatname} → ɢʀᴏᴜᴘ ɴᴀᴍᴇ\n\n"
-    "» ʜᴏᴡ ᴛᴏ ꜱᴇᴛ\n"
-    "• ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ (ᴛᴇxᴛ/ᴘʜᴏᴛᴏ/ᴠɪᴅᴇᴏ) ᴡɪᴛʜ /setwelcome\n"
-    "• ᴏʀ ꜱᴇɴᴅ ᴛᴇxᴛ ᴅɪʀᴇᴄᴛʟʏ\n\n"
-    "» ʙᴜᴛᴛᴏɴꜱ ᴇxᴀᴍᴘʟᴇ\n"
-    "[Rules](https://t.me/TG_BIO_STYLE) | [Support](https://t.me/TG_BIO_STYLE)\n\n"
-    "» ᴛɪᴘ\n"
-    "ʀᴇᴘʟʏ ᴛᴏ ᴍᴇᴅɪᴀ ᴛᴏ ꜱᴇᴛ ɪᴍᴀɢᴇ ᴡᴇʟᴄᴏᴍᴇ\n"
-    "ꜱɪʀғ ᴏɴ = ɴᴀᴀᴍ ʟɪɴᴋ + ᴜꜱᴇʀɴᴀᴍᴇ + ɢʀᴏᴜᴘ\n"
-    "ᴄᴜꜱᴛᴏᴍ ᴛᴇxᴛ = ᴘʟᴀᴄᴇʜᴏʟᴅᴇʀ + ᴘʀᴇᴍɪᴜᴍ ᴇᴍᴏջɪ"
+    "welcome system\n"
+    "/setwelcome\n"
+    "/welcome on\n"
+    "/welcome off\n"
+    "/cleanwelcome on\n"
+    "/cleanwelcome off\n"
+    "{first_name}\n"
+    "{username}\n"
+    "{id}\n"
+    "{mention}\n"
+    "{title}\n"
+    "{chatname}\n"
+    "reply media + /setwelcome\n"
+    "sirf on = name link + username + group\n"
+    "custom text = placeholder + premium emoji"
 )
+
+SEC_PAGES = {
+    "sec:anticheat": "anti-cheater\n/anticheat on\n/anticheat off",
+    "sec:abuse": "abuse filter\n/noswear on\n/noswear off",
+    "sec:approve": "approvals\n/approve reply\n/unapprove reply",
+    "sec:biolink": "biomode\n/biolink on\n/biolink off",
+    "sec:msgdel": "msgdelete\n/nolinks\n/noswear\n/nophone\n/nohashtag\n/noforward\n/nobotpromo\n/longmode\n/nomedia",
+    "sec:edit": "edit protect\n/editprotect on\n/editprotect off",
+    "sec:links": "links\n/nolinks on\n/nolinks off",
+    "sec:long": "longmode\n/longmode on\n/longmode off\n/longmode 500",
+    "sec:media": "media\n/nomedia on\n/nomedia off",
+    "sec:promo": "botpromo\n/nobotpromo on\n/nobotpromo off",
+    "sec:fwd": "forward\n/noforward on\n/noforward off",
+    "sec:hash": "hashtags\n/nohashtag on\n/nohashtag off",
+    "sec:phone": "phone\n/nophone on\n/nophone off",
+    "sec:mute": "mute warn\n/warn reply\n/unwarn reply\n3 warn = mute",
+}
 
 
 def welcome_status_text(chat_id: int) -> str:
     s = gset(chat_id)
-    return (
-        WELCOME_HELP
-        + "\n\n"
-        + f"» ꜱᴛᴀᴛᴜꜱ  ᴡᴇʟᴄᴏᴍᴇ {onoff(s.get('welcome'))}"
-        + f" · ᴄʟᴇᴀɴ {onoff(s.get('cleanwelcome'))}"
-    )
+    return WELCOME_HELP + "\n" + f"status welcome {onoff(s.get('welcome'))}\nclean {onoff(s.get('cleanwelcome'))}"
+
+
+def menu_payload(data: str):
+    pages = {
+        "menu:start": (start_caption(), start_buttons()),
+        "menu:help": (help_home(), help_buttons()),
+        "menu:tag": (TAG_HELP, nav_row()),
+        "menu:couples": (COUPLES_HELP, nav_row()),
+        "menu:games": (GAMES_HELP, nav_row()),
+        "menu:tools": (TOOLS_HELP, nav_row()),
+        "menu:welcome": (WELCOME_HELP, welcome_buttons()),
+        "menu:gset": (GSET_HELP, nav_row()),
+        "menu:security": (SECURITY_HELP, guard_buttons()),
+    }
+    if data in pages:
+        return pages[data]
+    if data in SEC_PAGES:
+        return SEC_PAGES[data], back_help()
+    return None
