@@ -44,17 +44,22 @@ def start_buttons():
     return [
         [btn("help", callback_data="menu:help", pe_name="help")],
         [btn("add to group", url=add_url, pe_name="add")],
-        [btn("support", url=SUPPORT_URL, pe_name="support"), btn("owner", url=OWNER_URL, pe_name="owner")],
-        [btn("game", callback_data="menu:games", pe_name="game"), btn("updates", url=UPDATES_URL, pe_name="updates")],
+        [btn("support", url=SUPPORT_URL, pe_name="support")],
+        [btn("owner", url=OWNER_URL, pe_name="owner")],
+        [btn("game", callback_data="menu:games", pe_name="game")],
+        [btn("updates", url=UPDATES_URL, pe_name="updates")],
         [btn("music bot", url=MUSIC_BOT_URL, pe_name="music")],
     ]
 
 
 def help_buttons():
     return [
-        [btn("tag system", callback_data="menu:tag", pe_name="tag"), btn("couples", callback_data="menu:couples", pe_name="couples")],
-        [btn("games", callback_data="menu:games", pe_name="game"), btn("user tools", callback_data="menu:tools", pe_name="tools")],
-        [btn("welcome", callback_data="menu:welcome", pe_name="welcome"), btn("settings", callback_data="menu:gset", pe_name="settings")],
+        [btn("tag system", callback_data="menu:tag", pe_name="tag")],
+        [btn("couples", callback_data="menu:couples", pe_name="couples")],
+        [btn("games", callback_data="menu:games", pe_name="game")],
+        [btn("user tools", callback_data="menu:tools", pe_name="tools")],
+        [btn("welcome", callback_data="menu:welcome", pe_name="welcome")],
+        [btn("settings", callback_data="menu:gset", pe_name="settings")],
         [btn("security guard", callback_data="menu:security", pe_name="security")],
         [btn("back to start", callback_data="menu:start", pe_name="start")],
     ]
@@ -62,120 +67,88 @@ def help_buttons():
 
 def guard_buttons():
     return [
-        [btn("anti-cheater", callback_data="sec:anticheat", pe_name="anticheat"), btn("abuse", callback_data="sec:abuse", pe_name="abuse")],
-        [btn("approvals", callback_data="sec:approve", pe_name="approve"), btn("biomode", callback_data="sec:biolink", pe_name="biolink")],
-        [btn("msgdelete", callback_data="sec:msgdel", pe_name="msgdel"), btn("edit", callback_data="sec:edit", pe_name="edit")],
-        [btn("links", callback_data="sec:links", pe_name="links"), btn("longmode", callback_data="sec:long", pe_name="long")],
-        [btn("media", callback_data="sec:media", pe_name="media"), btn("botpromo", callback_data="sec:promo", pe_name="promo")],
-        [btn("forward", callback_data="sec:fwd", pe_name="fwd"), btn("hashtags", callback_data="sec:hash", pe_name="hash")],
-        [btn("phone", callback_data="sec:phone", pe_name="phone"), btn("mute & warn", callback_data="sec:mute", pe_name="mute")],
+        [btn("anti-cheater", callback_data="sec:anticheat", pe_name="anticheat")],
+        [btn("abuse", callback_data="sec:abuse", pe_name="abuse")],
+        [btn("approvals", callback_data="sec:approve", pe_name="approve")],
+        [btn("biomode", callback_data="sec:biolink", pe_name="biolink")],
+        [btn("msgdelete", callback_data="sec:msgdel", pe_name="msgdel")],
+        [btn("edit", callback_data="sec:edit", pe_name="edit")],
+        [btn("links", callback_data="sec:links", pe_name="links")],
+        [btn("longmode", callback_data="sec:long", pe_name="long")],
+        [btn("media", callback_data="sec:media", pe_name="media")],
+        [btn("botpromo", callback_data="sec:promo", pe_name="promo")],
+        [btn("forward", callback_data="sec:fwd", pe_name="fwd")],
+        [btn("hashtags", callback_data="sec:hash", pe_name="hash")],
+        [btn("phone", callback_data="sec:phone", pe_name="phone")],
+        [btn("mute & warn", callback_data="sec:mute", pe_name="mute")],
         [btn("back to help", callback_data="menu:help", pe_name="back")],
     ]
 
 
 def nav_row():
-    return [[btn("back to help", callback_data="menu:help", pe_name="back"), btn("start", callback_data="menu:start", pe_name="start")]]
+    return [
+        [btn("back to help", callback_data="menu:help", pe_name="back")],
+        [btn("start", callback_data="menu:start", pe_name="start")],
+    ]
 
 
 def welcome_buttons():
     return [
-        [btn("welcome on", callback_data="do:welcome_on", pe_name="on"), btn("welcome off", callback_data="do:welcome_off", pe_name="off")],
-        [btn("clean on", callback_data="do:clean_on", pe_name="clean"), btn("clean off", callback_data="do:clean_off", pe_name="clean")],
-        *nav_row(),
+        [btn("welcome on", callback_data="do:welcome_on", pe_name="on")],
+        [btn("welcome off", callback_data="do:welcome_off", pe_name="off")],
+        [btn("clean on", callback_data="do:clean_on", pe_name="clean")],
+        [btn("clean off", callback_data="do:clean_off", pe_name="clean")],
+        [btn("support", url=SUPPORT_URL, pe_name="support")],
+        [btn("updates", url=UPDATES_URL, pe_name="updates")],
+        [btn("back to help", callback_data="menu:help", pe_name="back")],
+        [btn("start", callback_data="menu:start", pe_name="start")],
     ]
 
 
 def back_help():
-    return [[btn("security", callback_data="menu:security", pe_name="security"), btn("back to help", callback_data="menu:help", pe_name="back")]]
+    return [
+        [btn("security", callback_data="menu:security", pe_name="security")],
+        [btn("back to help", callback_data="menu:help", pe_name="back")],
+    ]
 
 
 def onoff(flag: bool) -> str:
     return sc("on") if flag else sc("off")
 
 
-TAG_HELP = (
-    "tag system\n"
-    "/utag\n"
-    "/tagall\n"
-    "/everyone\n"
-    "@all\n"
-    "/atag\n"
-    "/admins\n"
-    "@admins\n"
-    "/bots\n"
-    "/cancel\n"
-    "/speed turbo\n"
-    "/speed fast\n"
-    "/speed normal\n"
-    "/speed slow"
-)
-
-COUPLES_HELP = (
-    "couples\n"
-    "/couple\n"
-    "/pcouple\n"
-    "/mycouple\n"
-    "/breakup\n"
-    "/flirt"
-)
-
-GAMES_HELP = (
-    "games\n"
-    "/truth\n"
-    "/dare\n"
-    "/tod\n"
-    "/spin\n"
-    "/love"
-)
-
-TOOLS_HELP = (
-    "user tools\n"
-    "/id\n"
-    "/ping\n"
-    "/afk"
-)
-
-GSET_HELP = (
-    "group settings\n"
-    "/settings\n"
-    "/speed 2\n"
-    "/welcome on\n"
-    "/welcome off"
-)
-
-SECURITY_HELP = (
-    "security guard\n"
-    "anti-cheater\n"
-    "abuse\n"
-    "approvals\n"
-    "biomode\n"
-    "edit\n"
-    "links\n"
-    "longmode\n"
-    "media\n"
-    "botpromo\n"
-    "forward\n"
-    "hashtags\n"
-    "phone\n"
-    "mute warn"
-)
+TAG_HELP = "tag system\n/utag\n/tagall\n/everyone\n@all\n/atag\n/admins\n@admins\n/bots\n/cancel\n/speed turbo\n/speed fast\n/speed normal\n/speed slow"
+COUPLES_HELP = "couples\n/couple\n/pcouple\n/mycouple\n/breakup\n/flirt"
+GAMES_HELP = "games\n/truth\n/dare\n/tod\n/spin\n/love"
+TOOLS_HELP = "user tools\n/id\n/ping\n/afk"
+GSET_HELP = "group settings\n/settings\n/speed 2\n/welcome on\n/welcome off"
+SECURITY_HELP = "security guard\nanti-cheater\nabuse\napprovals\nbiomode\nedit\nlinks\nlongmode\nmedia\nbotpromo\nforward\nhashtags\nphone\nmute warn"
 
 WELCOME_HELP = (
-    "welcome system\n"
-    "/setwelcome\n"
+    "welcome system\n\n"
+    "commands\n"
+    "/setwelcome - set welcome message\n"
     "/welcome on\n"
     "/welcome off\n"
     "/cleanwelcome on\n"
-    "/cleanwelcome off\n"
-    "{first_name}\n"
-    "{username}\n"
-    "{id}\n"
-    "{mention}\n"
-    "{title}\n"
-    "{chatname}\n"
-    "reply media + /setwelcome\n"
+    "/cleanwelcome off\n\n"
+    "supported placeholders\n"
+    "{first_name} - user first name\n"
+    "{username} - @username\n"
+    "{id} - user id\n"
+    "{mention} - clickable mention\n"
+    "{title} - group name\n"
+    "{chatname} - group name\n\n"
+    "how to set\n"
+    "reply to a message text/photo/video with /setwelcome\n"
+    "or send text directly\n\n"
+    "buttons example\n"
+    "[Rules](https://t.me/TG_BIO_STYLE)\n"
+    "[Support](https://t.me/TG_BIO_STYLE)\n\n"
+    "tip\n"
+    "reply to media to set image welcome\n"
     "sirf on = name link + username + group\n"
-    "custom text = placeholder + premium emoji"
+    "custom text = placeholder + premium emoji\n"
+    "no button given = updates + support auto"
 )
 
 SEC_PAGES = {
@@ -198,7 +171,7 @@ SEC_PAGES = {
 
 def welcome_status_text(chat_id: int) -> str:
     s = gset(chat_id)
-    return WELCOME_HELP + "\n" + f"status welcome {onoff(s.get('welcome'))}\nclean {onoff(s.get('cleanwelcome'))}"
+    return WELCOME_HELP + "\n\nstatus welcome " + onoff(s.get("welcome")) + "\nclean " + onoff(s.get("cleanwelcome"))
 
 
 def menu_payload(data: str):
