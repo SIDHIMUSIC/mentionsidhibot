@@ -2,7 +2,7 @@
 
 CONFIG = {
     "owner_id": 8170572505,
-    "owner_url": "https://t.me/SANATANI_BACCHA",
+    "owner_url": "tg://user?id=8170572505",
     "support_url": "https://t.me/TG_BIO_STYLE",
     "music_bot_url": "https://t.me/PRAGYA_ROBOT",
     "updates_url": "https://t.me/TG_BIO_STYLE",
