@@ -12,6 +12,7 @@ from telethon import TelegramClient
 
 from config import CONFIG
 from tools import runtime
+from tools.clean_cmd import register_clean
 from tools.handlers import register
 
 load_dotenv()
@@ -30,6 +31,7 @@ if not API_ID or not API_HASH or not BOT_TOKEN:
 client = TelegramClient("mentionbot", API_ID, API_HASH)
 runtime.client = client
 register(client, OWNER_ID, START_PHOTOS)
+register_clean(client)
 
 
 async def main() -> None:
