@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://graph.org/file/de732e8e438bd2270fb5c-49eba2969fc27376c6.jpg" width="420">
+  <img src="https://graph.org/file/acdf3c70f8756ce4ccaf1-715ef9ca52f1e4b966.jpg" width="420">
 </p>
 
 <h1 align="center">✨ Mention Bot ✨</h1>
