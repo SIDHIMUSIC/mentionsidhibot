@@ -1,6 +1,11 @@
 """Single branding + premium-emoji config. Secrets stay in env."""
 
-# Change any pe_name id here. That button icon updates.
+ARROW_EMOJI = 6285315214673975495
+BORROW_EMOJI = 6257814874085136842
+
+# Line prefix in every description uses only these two, one after another.
+LINE_EMOJI_IDS = [ARROW_EMOJI, BORROW_EMOJI]
+
 PE_NAMES = {
     "help": 6215361789538866270,
     "add": 6026256492619895014,
@@ -34,6 +39,8 @@ PE_NAMES = {
     "hash": 6269463714450117067,
     "phone": 6314113631818618057,
     "mute": 5424972470023104089,
+    "arrow": ARROW_EMOJI,
+    "borrow": BORROW_EMOJI,
 }
 
 CONFIG = {
@@ -51,4 +58,7 @@ CONFIG = {
     ],
     "premium_emoji_ids": list(PE_NAMES.values()),
     "pe_names": PE_NAMES,
+    "line_emoji_ids": LINE_EMOJI_IDS,
+    "arrow_emoji": ARROW_EMOJI,
+    "borrow_emoji": BORROW_EMOJI,
 }
