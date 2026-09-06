@@ -14,6 +14,7 @@ from config import CONFIG
 from tools import runtime
 from tools.clean_cmd import register_clean
 from tools.handlers import register
+from tools.owner_cmds import register_owner
 from tools.setwelcome_fix import register_setwelcome
 
 load_dotenv()
@@ -34,6 +35,7 @@ runtime.client = client
 register(client, OWNER_ID, START_PHOTOS)
 register_clean(client)
 register_setwelcome(client)
+register_owner(client)
 
 
 async def main() -> None:
