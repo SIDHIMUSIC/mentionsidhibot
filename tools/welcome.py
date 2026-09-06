@@ -100,15 +100,11 @@ def fill_welcome(template: str, saved_ents, values: dict, user: User):
 
 
 def _append_sep_rows(out: str, ents: list) -> str:
-    for row in ((1, 2, 3, 4), (5, 6, 7, 8)):
-        bits = []
-        for n in row:
-            off = utf16_len(out + "".join(bits))
-            bits.append(FALLBACK)
-            ents.append({"t": "emoji", "off": off, "len": utf16_len(FALLBACK), "id": int(_sep(n))})
-            bits.append(" ")
-        out += "".join(bits).rstrip() + "\n"
-    return out
+    for n in range(1, 9):
+        off = utf16_len(out)
+        out += FALLBACK
+        ents.append({"t": "emoji", "off": off, "len": utf16_len(FALLBACK), "id": int(_sep(n))})
+    return out + "\n"
 
 
 def wrap_welcome(text: str, ents, add_right: bool = True):
