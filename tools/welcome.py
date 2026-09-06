@@ -38,9 +38,17 @@ SUPPORT_URL = CONFIG.get("support_url")
 
 def default_welcome_buttons():
     return [
-        [btn("updates", url=UPDATES_URL, pe_name="updates")],
-        [btn("support", url=SUPPORT_URL, pe_name="support")],
+        [btn("updates", url=UPDATES_URL, pe_name="welcome_b1")],
+        [btn("support", url=SUPPORT_URL, pe_name="welcome_b2")],
     ]
+
+
+def welcome_line_icon(index: int) -> int:
+    return (
+        pe_icon(f"welcome_l{index + 1}")
+        or pe_icon("welcome_line")
+        or pe_icon("welcome")
+    )
 
 
 def has_custom_emoji(saved) -> bool:
@@ -100,7 +108,7 @@ def fill_welcome(template: str, saved_ents, values: dict, user: User):
     return text, load_ents(ents)
 
 
-def add_line_premium(text: str, ents, pe_name: str = "welcome_line"):
+def add_line_premium(text: str, ents):
     if ents and hasattr(ents[0], "offset"):
         saved = dump_ents(ents)
     else:
@@ -109,20 +117,20 @@ def add_line_premium(text: str, ents, pe_name: str = "welcome_line"):
     for idx, ch in enumerate(text or ""):
         if ch == "\n":
             starts.append(idx + 1)
-    n = len(starts) - 1
-    icon = pe_icon(pe_name) or pe_icon("welcome")
-    for start in reversed(starts):
+    line_i = 0
+    numbered = []
+    for start in starts:
         nxt = text.find("\n", start)
         line = text[start:] if nxt < 0 else text[start:nxt]
-        if not line.strip():
-            n -= 1
-            continue
+        if line.strip():
+            numbered.append((start, line_i))
+            line_i += 1
+    for start, idx in reversed(numbered):
         start16 = utf16_len(text[:start])
         piece = FALLBACK + " "
         text = text[:start] + piece + text[start:]
         saved = shift_saved_ents(saved, start16, 0, utf16_len(piece))
-        saved.append({"t": "emoji", "off": start16, "len": utf16_len(FALLBACK), "id": int(icon)})
-        n -= 1
+        saved.append({"t": "emoji", "off": start16, "len": utf16_len(FALLBACK), "id": int(welcome_line_icon(idx))})
     return text, load_ents(saved)
 
 
@@ -145,10 +153,14 @@ async def grab_welcome_media(client, chat_id: int, message) -> str:
 
 def parse_welcome_buttons(items):
     rows = []
-    for item in (items or [])[:8]:
+    for i, item in enumerate((items or [])[:8]):
         if isinstance(item, dict) and item.get("url"):
+            pe = f"welcome_b{min(i + 1, 4)}"
             name = (item.get("text") or "link").strip().lower()
-            pe = "updates" if "update" in name else "support" if "support" in name else "welcome"
+            if "update" in name:
+                pe = "welcome_b1"
+            elif "support" in name:
+                pe = "welcome_b2"
             rows.append([btn(item.get("text") or "link", url=item["url"], pe_name=pe)])
     return rows or default_welcome_buttons()
 
@@ -170,7 +182,7 @@ async def send_welcome(client, chat_id: int, user: User, title: str = "", force:
     values = {"first_name": first, "username": uname, "id": str(user.id), "chatname": title or "group"}
     text, ents = fill_welcome(raw, raw_ents or [], values, user)
     if not has_custom_emoji(raw_ents):
-        text, ents = add_line_premium(text, ents, "welcome_line" if not custom else "welcome")
+        text, ents = add_line_premium(text, ents)
     if s.get("cleanwelcome") and s.get("welcome_last") and not force:
         try:
             await client.delete_messages(chat_id, int(s["welcome_last"]))
