@@ -2,8 +2,6 @@
 
 ARROW_EMOJI = 6285315214673975495
 BORROW_EMOJI = 6257814874085136842
-
-# Replace these when you send new IDs.
 START_LINE_EMOJI = 5224736245665511429
 WELCOME_LINE_EMOJI = 6127555770197219915
 
@@ -25,7 +23,27 @@ PE_NAMES = {
     "security": 5424972470023104089,
     "start": 5224736245665511429,
     "start_line": START_LINE_EMOJI,
+    "start_l1": START_LINE_EMOJI,
+    "start_l2": START_LINE_EMOJI,
+    "start_l3": START_LINE_EMOJI,
+    "start_l4": START_LINE_EMOJI,
+    "start_l5": START_LINE_EMOJI,
+    "start_l6": START_LINE_EMOJI,
+    "start_l7": START_LINE_EMOJI,
+    "start_l8": START_LINE_EMOJI,
     "welcome_line": WELCOME_LINE_EMOJI,
+    "welcome_l1": WELCOME_LINE_EMOJI,
+    "welcome_l2": WELCOME_LINE_EMOJI,
+    "welcome_l3": WELCOME_LINE_EMOJI,
+    "welcome_l4": WELCOME_LINE_EMOJI,
+    "welcome_l5": WELCOME_LINE_EMOJI,
+    "welcome_l6": WELCOME_LINE_EMOJI,
+    "welcome_l7": WELCOME_LINE_EMOJI,
+    "welcome_l8": WELCOME_LINE_EMOJI,
+    "welcome_b1": 6255991106417202590,
+    "welcome_b2": 5215394081911351762,
+    "welcome_b3": 6026256492619895014,
+    "welcome_b4": 5280858699286471614,
     "back": 5215377245639549895,
     "on": 6025929233291809651,
     "off": 6026088864341299395,
