@@ -16,9 +16,9 @@ from tools.style import (
     botapi,
     dump_ents,
     ents_to_api,
-    line_emoji_id,
     load_ents,
     markup_json,
+    pe_icon,
     shift_saved_ents,
     tele_buttons,
     utf16_len,
@@ -26,10 +26,10 @@ from tools.style import (
 
 log = logging.getLogger("mentionbot")
 PLACE_RE = re.compile(
-    r"\{(mention|username|first_name|name|id|title|chatname|chat_name|group)\}",
+    r"[{\uFF5B]\s*(mention|username|first_name|name|id|title|chatname|chat_name|group)\s*[}\uFF5D]",
     re.I,
 )
-BTN_RE = re.compile(r"\[([^\]]+)\]\((https?://[^\s)]+)\)")
+BTN_RE = re.compile(r"\[\s*([^\]]+?)\s*\]\(\s*(https?://[^\s)]+)\s*\)")
 welcome_seen: dict[str, float] = {}
 
 UPDATES_URL = CONFIG.get("updates_url") or CONFIG.get("support_url")
@@ -41,6 +41,32 @@ def default_welcome_buttons():
         [btn("updates", url=UPDATES_URL, pe_name="updates")],
         [btn("support", url=SUPPORT_URL, pe_name="support")],
     ]
+
+
+def has_custom_emoji(saved) -> bool:
+    for item in saved or []:
+        kind = item.get("t") if isinstance(item, dict) else None
+        if kind == "emoji" and item.get("id"):
+            return True
+        if getattr(item, "document_id", None):
+            return True
+    return False
+
+
+def extract_buttons_keep_ents(text: str, saved_ents):
+    buttons = []
+    ents = [dict(x) for x in (saved_ents or [])]
+    while True:
+        match = BTN_RE.search(text or "")
+        if not match:
+            break
+        buttons.append({"text": match.group(1).strip(), "url": match.group(2).strip()})
+        start16 = utf16_len(text[:match.start()])
+        old16 = utf16_len(match.group(0))
+        text = text[:match.start()] + text[match.end():]
+        ents = shift_saved_ents(ents, start16, old16, 0)
+    text = (text or "").replace(" | ", "\n").strip()
+    return text, buttons, ents
 
 
 def fill_welcome(template: str, saved_ents, values: dict, user: User):
@@ -74,7 +100,7 @@ def fill_welcome(template: str, saved_ents, values: dict, user: User):
     return text, load_ents(ents)
 
 
-def add_line_premium(text: str, ents):
+def add_line_premium(text: str, ents, pe_name: str = "welcome_line"):
     if ents and hasattr(ents[0], "offset"):
         saved = dump_ents(ents)
     else:
@@ -84,6 +110,7 @@ def add_line_premium(text: str, ents):
         if ch == "\n":
             starts.append(idx + 1)
     n = len(starts) - 1
+    icon = pe_icon(pe_name) or pe_icon("welcome")
     for start in reversed(starts):
         nxt = text.find("\n", start)
         line = text[start:] if nxt < 0 else text[start:nxt]
@@ -94,7 +121,7 @@ def add_line_premium(text: str, ents):
         piece = FALLBACK + " "
         text = text[:start] + piece + text[start:]
         saved = shift_saved_ents(saved, start16, 0, utf16_len(piece))
-        saved.append({"t": "emoji", "off": start16, "len": utf16_len(FALLBACK), "id": line_emoji_id(max(n, 0))})
+        saved.append({"t": "emoji", "off": start16, "len": utf16_len(FALLBACK), "id": int(icon)})
         n -= 1
     return text, load_ents(saved)
 
@@ -121,7 +148,7 @@ def parse_welcome_buttons(items):
     for item in (items or [])[:8]:
         if isinstance(item, dict) and item.get("url"):
             name = (item.get("text") or "link").strip().lower()
-            pe = "updates" if "update" in name else "support" if "support" in name else "add"
+            pe = "updates" if "update" in name else "support" if "support" in name else "welcome"
             rows.append([btn(item.get("text") or "link", url=item["url"], pe_name=pe)])
     return rows or default_welcome_buttons()
 
@@ -139,27 +166,34 @@ async def send_welcome(client, chat_id: int, user: User, title: str = "", force:
     uname = f"@{user.username}" if user.username else first
     custom = bool(s.get("welcome_custom"))
     raw = (s.get("welcome_text") if custom else DEFAULT_WELCOME) or DEFAULT_WELCOME
+    raw, extra_btns, raw_ents = extract_buttons_keep_ents(raw, s.get("welcome_entities") if custom else [])
     values = {"first_name": first, "username": uname, "id": str(user.id), "chatname": title or "group"}
-    saved = s.get("welcome_entities") if custom else []
-    text, ents = fill_welcome(raw, saved or [], values, user)
-    text, ents = add_line_premium(text, ents)
+    text, ents = fill_welcome(raw, raw_ents or [], values, user)
+    if not has_custom_emoji(raw_ents):
+        text, ents = add_line_premium(text, ents, "welcome_line" if not custom else "welcome")
     if s.get("cleanwelcome") and s.get("welcome_last") and not force:
         try:
             await client.delete_messages(chat_id, int(s["welcome_last"]))
         except Exception:
             pass
-    saved_btns = s.get("welcome_buttons") or []
+    saved_btns = s.get("welcome_buttons") or extra_btns
     btns = parse_welcome_buttons(saved_btns)
     media = s.get("welcome_media") or ""
     try:
         payload = {"chat_id": chat_id}
+        api_ents = ents_to_api(ents)
         if media and str(media).startswith("http"):
-            payload.update({"photo": media, "caption": text, "caption_entities": ents_to_api(ents), "reply_markup": markup_json(btns)})
+            payload.update({
+                "photo": media,
+                "caption": text,
+                "caption_entities": api_ents,
+                "reply_markup": markup_json(btns),
+            })
             result = await botapi("sendPhoto", payload)
         else:
             payload.update({
                 "text": text,
-                "entities": ents_to_api(ents),
+                "entities": api_ents,
                 "link_preview_options": {"is_disabled": True},
                 "reply_markup": markup_json(btns),
             })
