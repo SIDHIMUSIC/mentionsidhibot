@@ -5,6 +5,7 @@ CONFIG = {
     "owner_url": "tg://user?id=8170572505",
     "support_url": "https://t.me/TG_BIO_STYLE",
     "music_bot_url": "https://t.me/PRAGYA_ROBOT",
+    "updates_url": "https://t.me/TG_BIO_STYLE",
     "start_photos": [
         "https://graph.org/file/de732e8e438bd2270fb5c-49eba2969fc27376c6.jpg",
         "https://graph.org/file/0a598b51a872c36d2a9c5-4f4aa6e6de87bea8d6.jpg",
