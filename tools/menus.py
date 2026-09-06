@@ -39,52 +39,51 @@ def start_buttons():
     from tools.runtime import ME_USERNAME as handle
     add_url = f"https://t.me/{handle}?startgroup=true" if handle else SUPPORT_URL
     return [
-        [btn("help", callback_data="menu:help", pe_name="help")],
-        [btn("add to group", url=add_url, pe_name="add")],
-        [btn("support", url=SUPPORT_URL, pe_name="support"), btn("owner", url=OWNER_URL, pe_name="owner")],
-        [btn("game", callback_data="menu:games", pe_name="game"), btn("updates", url=UPDATES_URL, pe_name="updates")],
-        [btn("music bot", url=MUSIC_BOT_URL, pe_name="music")],
+        [btn("add to group", url=add_url, pe_name="add", style="success")],
+        [btn("owner", url=OWNER_URL, pe_name="owner", style="primary"), btn("game", callback_data="menu:games", pe_name="game", style="primary")],
+        [btn("help & commands", callback_data="menu:help", pe_name="help", style="primary")],
+        [btn("support", url=SUPPORT_URL, pe_name="support", style="primary"), btn("music bot", url=MUSIC_BOT_URL, pe_name="music", style="danger")],
     ]
 
 
 def help_buttons():
     return [
-        [btn("tag system", callback_data="menu:tag", pe_name="tag"), btn("couples", callback_data="menu:couples", pe_name="couples")],
-        [btn("games", callback_data="menu:games", pe_name="game"), btn("user tools", callback_data="menu:tools", pe_name="tools")],
-        [btn("welcome", callback_data="menu:welcome", pe_name="welcome"), btn("settings", callback_data="menu:gset", pe_name="settings")],
-        [btn("security guard", callback_data="menu:security", pe_name="security")],
-        [btn("back to start", callback_data="menu:start", pe_name="start")],
+        [btn("tag system", callback_data="menu:tag", pe_name="tag", style="primary"), btn("couples", callback_data="menu:couples", pe_name="couples", style="danger")],
+        [btn("games", callback_data="menu:games", pe_name="game", style="success"), btn("user tools", callback_data="menu:tools", pe_name="tools", style="primary")],
+        [btn("welcome", callback_data="menu:welcome", pe_name="welcome", style="success"), btn("settings", callback_data="menu:gset", pe_name="settings", style="primary")],
+        [btn("security guard", callback_data="menu:security", pe_name="security", style="danger")],
+        [btn("back to start", callback_data="menu:start", pe_name="start", style="primary")],
     ]
 
 
 def guard_buttons():
     return [
-        [btn("anti-cheater", callback_data="sec:anticheat", pe_name="anticheat"), btn("abuse", callback_data="sec:abuse", pe_name="abuse")],
-        [btn("approvals", callback_data="sec:approve", pe_name="approve"), btn("biomode", callback_data="sec:biolink", pe_name="biolink")],
-        [btn("msgdelete", callback_data="sec:msgdel", pe_name="msgdel"), btn("edit", callback_data="sec:edit", pe_name="edit")],
-        [btn("links", callback_data="sec:links", pe_name="links"), btn("longmode", callback_data="sec:long", pe_name="long")],
-        [btn("media", callback_data="sec:media", pe_name="media"), btn("botpromo", callback_data="sec:promo", pe_name="promo")],
-        [btn("forward", callback_data="sec:fwd", pe_name="fwd"), btn("hashtags", callback_data="sec:hash", pe_name="hash")],
-        [btn("phone", callback_data="sec:phone", pe_name="phone"), btn("mute & warn", callback_data="sec:mute", pe_name="mute")],
-        [btn("back to help", callback_data="menu:help", pe_name="back")],
+        [btn("anti-cheater", callback_data="sec:anticheat", pe_name="anticheat", style="danger"), btn("abuse", callback_data="sec:abuse", pe_name="abuse", style="danger")],
+        [btn("approvals", callback_data="sec:approve", pe_name="approve", style="success"), btn("biomode", callback_data="sec:biolink", pe_name="biolink", style="primary")],
+        [btn("msgdelete", callback_data="sec:msgdel", pe_name="msgdel", style="danger"), btn("edit", callback_data="sec:edit", pe_name="edit", style="primary")],
+        [btn("links", callback_data="sec:links", pe_name="links", style="primary"), btn("longmode", callback_data="sec:long", pe_name="long", style="primary")],
+        [btn("media", callback_data="sec:media", pe_name="media", style="success"), btn("botpromo", callback_data="sec:promo", pe_name="promo", style="danger")],
+        [btn("forward", callback_data="sec:fwd", pe_name="fwd", style="primary"), btn("hashtags", callback_data="sec:hash", pe_name="hash", style="primary")],
+        [btn("phone", callback_data="sec:phone", pe_name="phone", style="primary"), btn("mute & warn", callback_data="sec:mute", pe_name="mute", style="danger")],
+        [btn("back to help", callback_data="menu:help", pe_name="back", style="primary")],
     ]
 
 
 def nav_row():
-    return [[btn("back to help", callback_data="menu:help", pe_name="back"), btn("start", callback_data="menu:start", pe_name="start")]]
+    return [[btn("back to help", callback_data="menu:help", pe_name="back", style="primary"), btn("start", callback_data="menu:start", pe_name="start", style="success")]]
 
 
 def welcome_buttons():
     return [
-        [btn("welcome on", callback_data="do:welcome_on", pe_name="on"), btn("welcome off", callback_data="do:welcome_off", pe_name="off")],
-        [btn("clean on", callback_data="do:clean_on", pe_name="clean"), btn("clean off", callback_data="do:clean_off", pe_name="clean")],
-        [btn("support", url=SUPPORT_URL, pe_name="support"), btn("updates", url=UPDATES_URL, pe_name="updates")],
-        [btn("back to help", callback_data="menu:help", pe_name="back"), btn("start", callback_data="menu:start", pe_name="start")],
+        [btn("welcome on", callback_data="do:welcome_on", pe_name="on", style="success"), btn("welcome off", callback_data="do:welcome_off", pe_name="off", style="danger")],
+        [btn("clean on", callback_data="do:clean_on", pe_name="clean", style="success"), btn("clean off", callback_data="do:clean_off", pe_name="clean", style="danger")],
+        [btn("support", url=SUPPORT_URL, pe_name="support", style="primary")],
+        [btn("back to help", callback_data="menu:help", pe_name="back", style="primary"), btn("start", callback_data="menu:start", pe_name="start", style="success")],
     ]
 
 
 def back_help():
-    return [[btn("security", callback_data="menu:security", pe_name="security"), btn("back to help", callback_data="menu:help", pe_name="back")]]
+    return [[btn("security", callback_data="menu:security", pe_name="security", style="danger"), btn("back to help", callback_data="menu:help", pe_name="back", style="primary")]]
 
 
 def onoff(flag: bool) -> str:
