@@ -228,23 +228,27 @@ def sc_keep(text: str) -> str:
     return "".join(parts)
 
 def _is_start_caption(text: str) -> bool:
-    low = (text or "").lower()
-    return "its me" in low and "smart tag bot" in low
+    low = (text or "").lower().replace("ɪ", "i").replace("ꜱ", "s").replace("ᴇ", "e")
+    compact = low.replace(" ", "")
+    return ("its me" in low) or ("smart tag bot" in low) or ("itsme" in compact)
 
 def rich(text: str, start: int = 0):
-    text = sc_keep(text)
-    if _is_start_caption(text):
+    raw = text or ""
+    skip_arrows = _is_start_caption(raw)
+    text = sc_keep(raw)
+    if skip_arrows:
         return text, []
     out, ents, n = "", [], start
     for i, line in enumerate(text.split("\n")):
         if i:
             out += "\n"
+        if not line.strip():
+            continue
         off = utf16_len(out)
         out += FALLBACK
         ents.append(MessageEntityCustomEmoji(off, utf16_len(FALLBACK), line_emoji_id(n)))
         n += 1
-        if line:
-            out += " " + line
+        out += " " + line
     return out, ents
 
 async def say(client, target, text: str, buttons=None, reply_to=None):
