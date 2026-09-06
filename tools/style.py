@@ -143,20 +143,17 @@ def _is_start_caption(text: str) -> bool:
     return ("its me" in low) or ("smart tag bot" in low) or ("itsme" in compact)
 
 async def botapi(method: str, payload: dict) -> dict:
-    body = dict(payload or {})
-    if method == "sendPhoto" and _is_start_caption(body.get("caption") or ""):
-        body["has_spoiler"] = True
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/{method}"
-    data = json.dumps(body).encode("utf-8")
+    data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
     def _call():
         try:
             with urllib.request.urlopen(req, timeout=20) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            err = exc.read().decode("utf-8", "ignore")
-            log.warning("botapi %s %s %s", method, exc.code, err[:300])
-            return {"ok": False, "description": err}
+            body = exc.read().decode("utf-8", "ignore")
+            log.warning("botapi %s %s %s", method, exc.code, body[:300])
+            return {"ok": False, "description": body}
     return await asyncio.to_thread(_call)
 
 def dump_ents(entities, shift: int = 0) -> list[dict]:
