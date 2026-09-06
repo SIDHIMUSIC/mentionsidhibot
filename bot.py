@@ -77,13 +77,18 @@ PHONE_RE = re.compile(r"(?:\+?\d[\d\-\s()]{8,}\d)")
 LINK_RE = re.compile(r"(https?://|t\.me/|www\.|\.com\b|\.in\b)", re.I)
 PROMO_RE = re.compile(r"(t\.me/\w+|@\w*bot\b)", re.I)
 
-_MAP = str.maketrans(
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
-    "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇",
+SC = str.maketrans(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ",
 )
 
+
+def sc(text: str) -> str:
+    return (text or "").translate(SC)
+
+
 def sty(text: str) -> str:
-    return text.translate(_MAP)
+    return sc(text)
 
 ME_NAME = "Bot"
 ME_USERNAME = ""
@@ -130,6 +135,7 @@ client = TelegramClient("mentionbot", API_ID, API_HASH)
 active_jobs: set[int] = set()
 last_run: dict[int, float] = {}
 last_start: dict[int, float] = {}
+cancel_by: dict[int, tuple] = {}
 stats = {"mentions_sent": 0, "jobs": 0}
 AFK: dict[int, str] = {}
 COUPLES: dict[str, dict] = {}
@@ -143,17 +149,46 @@ def emoji_id(i: int) -> int:
     return PREMIUM_EMOJI_IDS[i % len(PREMIUM_EMOJI_IDS)]
 
 
-def decorate(text: str, n: int = 3):
-    """Prefix a few custom premium emojis onto plain text."""
+def rich(text: str, start: int = 0):
+    """Small-caps text with a premium custom emoji on every line."""
+    text = sc(text)
     out = ""
     ents = []
-    for i in range(min(n, len(PREMIUM_EMOJI_IDS))):
+    n = start
+    for i, line in enumerate(text.split("\n")):
+        if i:
+            out += "\n"
         off = utf16_len(out)
         out += FALLBACK
-        ents.append(MessageEntityCustomEmoji(off, utf16_len(FALLBACK), emoji_id(i)))
-        out += " "
-    out += text
+        ents.append(MessageEntityCustomEmoji(off, utf16_len(FALLBACK), emoji_id(n)))
+        n += 1
+        if line:
+            out += " " + line
     return out, ents
+
+
+async def say(target, text: str, buttons=None, reply_to=None):
+    body, ents = rich(text)
+    kwargs = {"formatting_entities": ents, "link_preview": False}
+    if buttons is not None:
+        kwargs["buttons"] = buttons
+    if reply_to is not None:
+        kwargs["reply_to"] = reply_to
+    chat = getattr(target, "chat_id", target)
+    if hasattr(target, "reply") and reply_to is None and buttons is None:
+        try:
+            return await target.reply(body, formatting_entities=ents, link_preview=False)
+        except Exception:
+            pass
+    return await client.send_message(chat, body, **kwargs)
+
+
+async def edit_say(event, text: str, buttons=None):
+    body, ents = rich(text)
+    try:
+        return await event.edit(body, formatting_entities=ents, buttons=buttons)
+    except Exception:
+        return await say(event, text, buttons=buttons)
 
 
 def mention_pack(header: str, users: list[User], show_name: bool, start: int):
@@ -178,113 +213,86 @@ def mention_pack(header: str, users: list[User], show_name: bool, start: int):
 def start_caption() -> str:
     handle = f"@{ME_USERNAME}" if ME_USERNAME else bot_name()
     return (
-        f"♡ It's Me — {bot_name()}\n"
+        f"ɪᴛꜱ ᴍᴇ — {bot_name()}\n"
         f"{handle}\n\n"
-        "📌 A Smart Tag-Bot\n"
-        "△ Fun Conversations\n"
-        "Works in Groups & Private\n"
-        "Keeps Chats Active + Fun\n"
-        "⚠ Premium Tag System\n"
-        "⚡ Stylish & Smooth\n"
-        "Games · Fun Tools · Guard"
+        "ꜱᴍᴀʀᴛ ᴛᴀɢ ʙᴏᴛ ꜰᴏʀ ɢʀᴏᴜᴘꜱ\n"
+        "ᴘʀᴇᴍɪᴜᴍ ᴛᴀɢ + ɢᴀᴍᴇꜱ + ɢᴜᴀʀᴅ\n"
+        "ᴀᴅᴅ ɪɴ ɢʀᴏᴜᴘ · ᴍᴀᴋᴇ ᴀᴅᴍɪɴ · ᴜꜱᴇ /ᴜᴛᴀɢ"
     )
 
 
 def help_home() -> str:
     return (
-        "📚 HELP CENTER — SELECT CATEGORY\n\n"
-        "Choose a section below:\n\n"
-        "△ TAG SYSTEM — tag members & admins\n"
-        "Couple system — set couples\n"
-        "Games — fun games\n"
-        "User tools — utilities\n"
-        "Welcome — welcome on/off\n"
-        "⚠ Security Guard — group protection\n"
-        "⚙ Group Settings — toggles"
+        "ʜᴇʟᴘ ᴄᴇɴᴛᴇʀ — ꜱᴇʟᴇᴄᴛ ᴄᴀᴛᴇɢᴏʀʏ\n\n"
+        "ᴛᴀɢ ꜱʏꜱᴛᴇᴍ — ᴍᴇᴍʙᴇʀꜱ & ᴀᴅᴍɪɴꜱ ᴛᴀɢ\n"
+        "ᴄᴏᴜᴘʟᴇꜱ — 24ʜ / ᴘᴇʀᴍ ᴄᴏᴜᴘʟᴇ ꜱᴇᴛ\n"
+        "ɢᴀᴍᴇꜱ — ᴛʀᴜᴛʜ ᴅᴀʀᴇ ꜱᴘɪɴ ʟᴏᴠᴇ\n"
+        "ᴜꜱᴇʀ ᴛᴏᴏʟꜱ — ɪᴅ ᴘɪɴɢ ᴀꜰᴋ ꜱᴛᴀᴛꜱ\n"
+        "ᴡᴇʟᴄᴏᴍᴇ — ɴᴇᴡ ᴍᴇᴍʙᴇʀ ᴍꜱɢ ᴏɴ/ᴏꜰꜰ\n"
+        "ꜱᴇᴛᴛɪɴɢꜱ — ɢʀᴏᴜᴘ ᴛᴀɢ ᴏᴘᴛɪᴏɴꜱ\n"
+        "ꜱᴇᴄᴜʀɪᴛʏ ɢᴜᴀʀᴅ — 14 ᴘʀᴏᴛᴇᴄᴛ ᴍᴏᴅᴜʟᴇꜱ"
     )
 
 
 def start_buttons():
     add_url = f"https://t.me/{ME_USERNAME}?startgroup=true" if ME_USERNAME else SUPPORT_URL
     return [
-        [Button.url(f"♡ {sty('ADD ME TO YOUR GROUP')}", add_url)],
+        [Button.url(sc("✦ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ"), add_url)],
         [
-            Button.url(f"👑 {sty('OWNER')}", OWNER_URL),
-            Button.inline(f"🎮 {sty('GAME')}", b"menu:games"),
+            Button.url(sc("✦ ᴏᴡɴᴇʀ"), OWNER_URL),
+            Button.inline(sc("✦ ɢᴀᴍᴇ"), b"menu:games"),
         ],
-        [Button.inline(f"△ {sty('HELP & COMMANDS')}", b"menu:help")],
+        [Button.inline(sc("✦ ʜᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ"), b"menu:help")],
         [
-            Button.url(f"💬 {sty('SUPPORT')}", SUPPORT_URL),
-            Button.url(f"⚡ {sty('UPDATES')}", UPDATES_URL),
+            Button.url(sc("✦ ꜱᴜᴘᴘᴏʀᴛ"), SUPPORT_URL),
+            Button.url(sc("✦ ᴜᴘᴅᴀᴛᴇꜱ"), UPDATES_URL),
         ],
-        [Button.url(f"🎵 {sty('MUSIC BOT')}", MUSIC_BOT_URL)],
+        [Button.url(sc("✦ ᴍᴜꜱɪᴄ ʙᴏᴛ"), MUSIC_BOT_URL)],
     ]
 
 
 def help_buttons():
     return [
         [
-            Button.inline(f"△ {sty('TAG SYSTEM')}", b"menu:tag"),
-            Button.inline(f"🔥 {sty('COUPLES')}", b"menu:couples"),
+            Button.inline(sc("✦ ᴛᴀɢ ꜱʏꜱᴛᴇᴍ"), b"menu:tag"),
+            Button.inline(sc("✦ ᴄᴏᴜᴘʟᴇꜱ"), b"menu:couples"),
         ],
         [
-            Button.inline(f"🎮 {sty('GAMES')}", b"menu:games"),
-            Button.inline(f"✨ {sty('USER TOOLS')}", b"menu:tools"),
+            Button.inline(sc("✦ ɢᴀᴍᴇꜱ"), b"menu:games"),
+            Button.inline(sc("✦ ᴜꜱᴇʀ ᴛᴏᴏʟꜱ"), b"menu:tools"),
         ],
         [
-            Button.inline(f"👋 {sty('WELCOME')}", b"menu:welcome"),
-            Button.inline(f"⚙ {sty('SETTINGS')}", b"menu:gset"),
+            Button.inline(sc("✦ ᴡᴇʟᴄᴏᴍᴇ"), b"menu:welcome"),
+            Button.inline(sc("✦ ꜱᴇᴛᴛɪɴɢꜱ"), b"menu:gset"),
         ],
-        [Button.inline(f"⚠ {sty('SECURITY GUARD')}", b"menu:security")],
-        [Button.inline(f"🏠 {sty('BACK TO START')}", b"menu:start")],
+        [Button.inline(sc("✦ ꜱᴇᴄᴜʀɪᴛʏ ɢᴜᴀʀᴅ"), b"menu:security")],
+        [Button.inline(sc("✦ ʙᴀᴄᴋ ᴛᴏ ꜱᴛᴀʀᴛ"), b"menu:start")],
     ]
 
 
 def guard_buttons():
     return [
-        [
-            Button.inline("⚠ 🚫 ANTI-CHEATER", b"sec:anticheat"),
-            Button.inline("⚠ 🚫 ABUSE", b"sec:abuse"),
-        ],
-        [
-            Button.inline("🔵 ✅ APPROVALS", b"sec:approve"),
-            Button.inline("⚡ 🙈 BIOMODE", b"sec:biolink"),
-        ],
-        [
-            Button.inline("🚨 🗑 MSGDELETE", b"sec:msgdel"),
-            Button.inline("🔮 ✏️ EDIT", b"sec:edit"),
-        ],
-        [
-            Button.inline("🔗 LINKS", b"sec:links"),
-            Button.inline("⚡ 📜 LONGMODE", b"sec:long"),
-        ],
-        [
-            Button.inline("📌 📸 MEDIA", b"sec:media"),
-            Button.inline("🐹 📢 BOTPROMO", b"sec:promo"),
-        ],
-        [
-            Button.inline("🔥 ↩️ FORWARD", b"sec:fwd"),
-            Button.inline("⚡ # HASHTAGS", b"sec:hash"),
-        ],
-        [
-            Button.inline("🔵 📞 PHONE", b"sec:phone"),
-            Button.inline("🚨 📣 MUTE & WARN", b"sec:mute"),
-        ],
-        [Button.inline("🔵 ⬅️ BACK TO HELP", b"menu:help")],
+        [Button.inline(sc("✦ ᴀɴᴛɪ-ᴄʜᴇᴀᴛᴇʀ"), b"sec:anticheat"), Button.inline(sc("✦ ᴀʙᴜꜱᴇ"), b"sec:abuse")],
+        [Button.inline(sc("✦ ᴀᴘᴘʀᴏᴠᴀʟꜱ"), b"sec:approve"), Button.inline(sc("✦ ʙɪᴏᴍᴏᴅᴇ"), b"sec:biolink")],
+        [Button.inline(sc("✦ ᴍꜱɢᴅᴇʟᴇᴛᴇ"), b"sec:msgdel"), Button.inline(sc("✦ ᴇᴅɪᴛ"), b"sec:edit")],
+        [Button.inline(sc("✦ ʟɪɴᴋꜱ"), b"sec:links"), Button.inline(sc("✦ ʟᴏɴɢᴍᴏᴅᴇ"), b"sec:long")],
+        [Button.inline(sc("✦ ᴍᴇᴅɪᴀ"), b"sec:media"), Button.inline(sc("✦ ʙᴏᴛᴘʀᴏᴍᴏ"), b"sec:promo")],
+        [Button.inline(sc("✦ ꜰᴏʀᴡᴀʀᴅ"), b"sec:fwd"), Button.inline(sc("✦ ʜᴀꜱʜᴛᴀɢꜱ"), b"sec:hash")],
+        [Button.inline(sc("✦ ᴘʜᴏɴᴇ"), b"sec:phone"), Button.inline(sc("✦ ᴍᴜᴛᴇ & ᴡᴀʀɴ"), b"sec:mute")],
+        [Button.inline(sc("✦ ʙᴀᴄᴋ ᴛᴏ ʜᴇʟᴘ"), b"menu:help")],
     ]
+
+
+def nav_row():
+    return [[Button.inline(sc("✦ ʜᴇʟᴘ"), b"menu:help"), Button.inline(sc("✦ ꜱᴛᴀʀᴛ"), b"menu:start")]]
 
 
 def back_help():
-    return [
-        [
-            Button.inline(f"⚠ {sty('SECURITY')}", b"menu:security"),
-            Button.inline(f"📚 {sty('HELP')}", b"menu:help"),
-        ]
-    ]
+    return [[Button.inline(sc("✦ ꜱᴇᴄᴜʀɪᴛʏ"), b"menu:security"), Button.inline(sc("✦ ʜᴇʟᴘ"), b"menu:help")]]
 
 
 def onoff(flag: bool) -> str:
-    return "ON ✅" if flag else "OFF ❌"
+    return sc("ᴏɴ") if flag else sc("ᴏꜰꜰ")
 
 
 async def is_admin(chat, user_id: int) -> bool:
@@ -317,7 +325,7 @@ async def collect(chat, kind: str) -> list[User]:
 
 async def run_mention(event, kind: str, extra: str, force_admin=None) -> None:
     if event.is_private:
-        await event.reply("Ye tag command **group** mein chalti hai. Bot ko group mein add karke `/utag` do.")
+        await say(event, "ᴛᴀɢ ᴄᴏᴍᴍᴀɴᴅ ꜱɪʀꜰ ɢʀᴏᴜᴘ ᴍᴇɪɴ ᴄʜᴀʟᴛɪ ʜᴀɪ · ʙᴏᴛ ᴋᴏ ɢʀᴏᴜᴘ ᴍᴇɪɴ ᴀᴅᴅ ᴋᴀʀᴏ")
         return
     chat = await event.get_chat()
     chat_id = event.chat_id
@@ -325,14 +333,14 @@ async def run_mention(event, kind: str, extra: str, force_admin=None) -> None:
     s = gset(chat_id)
     need = s["admin_only"] if force_admin is None else force_admin
     if need and not await is_admin(chat, sender.id):
-        await event.reply("Sirf admins tag chala sakte hain.")
+        await say(event, "ꜱɪʀꜰ ᴀᴅᴍɪɴꜱ ᴛᴀɢ ᴄʜᴀʟᴀ ꜱᴀᴋᴛᴇ ʜᴀɪɴ")
         return
     wait = s["cooldown"] - (time.time() - last_run.get(chat_id, 0))
     if wait > 0 and chat_id not in active_jobs:
-        await event.reply(f"Cooldown `{int(wait)}s`")
+        await say(event, f"ᴄᴏᴏʟᴅᴏᴡɴ {int(wait)}ꜱ")
         return
     if chat_id in active_jobs:
-        await event.reply("Pehle se tag chal raha hai. `/cancel`")
+        await say(event, "ᴘᴇʜʟᴇ ꜱᴇ ᴛᴀɢ ᴄʜᴀʟ ʀᴀʜᴀ ʜᴀɪ · /ᴄᴀɴᴄᴇʟ")
         return
     active_jobs.add(chat_id)
     stats["jobs"] += 1
@@ -341,20 +349,24 @@ async def run_mention(event, kind: str, extra: str, force_admin=None) -> None:
         members = await collect(chat, kind)
     except Exception as exc:
         active_jobs.discard(chat_id)
-        await event.reply(f"Members nahi mile. Bot ko admin banao.\n`{type(exc).__name__}`")
+        await say(event, f"ᴍᴇᴍʙᴇʀꜱ ɴᴀʜɪ ᴍɪʟᴇ · ʙᴏᴛ ᴋᴏ ᴀᴅᴍɪɴ ʙᴀɴᴀᴏ · {type(exc).__name__}")
         return
     if not members:
         active_jobs.discard(chat_id)
-        await event.reply("Koi member nahi mila.")
+        await say(event, "ᴋᴏɪ ᴍᴇᴍʙᴇʀ ɴᴀʜɪ ᴍɪʟᴀ")
         return
-    header = extra.strip() if extra.strip() else f"{bot_name()} — sab yahan aao"
-    status = await event.reply(f"Tag start — **{len(members)}**\n`/cancel`")
+    header = extra.strip() if extra.strip() else sc(f"{bot_name()} — ꜱᴀʙ ʏᴀʜᴀɴ ᴀᴀᴏ")
+    status = await say(event, f"ᴛᴀɢ ꜱᴛᴀʀᴛ · {len(members)} · /ᴄᴀɴᴄᴇʟ")
     sent = 0
     batch = max(3, min(8, int(s["batch"])))
     try:
         for i in range(0, len(members), batch):
             if chat_id not in active_jobs:
-                await event.reply("Tag cancel.")
+                who = cancel_by.get(chat_id)
+                if who:
+                    await mention_cancel(chat_id, who[0], who[1])
+                else:
+                    await say(event, "ᴛᴀɢ ᴄᴀɴᴄᴇʟ")
                 return
             body, ents = mention_pack(header, members[i : i + batch], s["names"], i)
             try:
@@ -367,32 +379,45 @@ async def run_mention(event, kind: str, extra: str, force_admin=None) -> None:
             await asyncio.sleep(float(s.get("delay", 2)))
     finally:
         active_jobs.discard(chat_id)
-    try:
-        await status.edit(f"Done ✨ {sent}/{len(members)}")
-    except Exception:
-        await event.reply(f"Done ✨ {sent}/{len(members)}")
+    await say(event, f"ᴅᴏɴᴇ · {sent}/{len(members)} ᴍᴇɴᴛɪᴏɴ")
 
 
-async def send_start(event):
+async def mention_cancel(chat_id: int, user_id: int, name: str) -> None:
+    label = sc("ᴄᴀɴᴄᴇʟ ʙʏ ")
+    text = label + name
+    ents = [
+        MessageEntityCustomEmoji(0, utf16_len(FALLBACK), emoji_id(0)),
+    ]
+    # rebuild with premium + mention
+    text = FALLBACK + " " + label
+    ents = [MessageEntityCustomEmoji(0, utf16_len(FALLBACK), emoji_id(0))]
+    off = utf16_len(text)
+    text += name
+    ents.append(MessageEntityTextUrl(off, utf16_len(name), f"tg://user?id={user_id}"))
+    await client.send_message(chat_id, text, formatting_entities=ents, link_preview=False)
+
+
+async def send_start(event, force: bool = False):
     cid = event.chat_id
     now = time.time()
-    if now - last_start.get(cid, 0) < 2:
+    if not force and now - last_start.get(cid, 0) < 2:
         return
     last_start[cid] = now
     photo = random.choice(START_PHOTOS) if START_PHOTOS else None
+    cap, ents = rich(start_caption())
     if photo:
         try:
             await client.send_file(
                 cid,
                 photo,
-                caption=start_caption(),
+                caption=cap,
+                formatting_entities=ents,
                 buttons=start_buttons(),
-                reply_to=getattr(event, "id", None),
             )
             return
         except Exception as exc:
             log.warning("start photo: %s", exc)
-    await event.reply(start_caption(), buttons=start_buttons())
+    await client.send_message(cid, cap, formatting_entities=ents, buttons=start_buttons())
 
 
 def extra_from(event) -> str:
@@ -404,92 +429,39 @@ def extra_from(event) -> str:
 
 
 SEC_PAGES = {
-    "sec:anticheat": (
-        "⚠ ANTI-CHEATER\n\n"
-        "Spam / cheat-style messages delete.\n\n"
-        "`/anticheat on`\n`/anticheat off`"
-    ),
-    "sec:abuse": (
-        "⚠ ABUSE\n\n"
-        "Gali-galoch delete.\n\n"
-        "`/noswear on`\n`/noswear off`"
-    ),
-    "sec:approve": (
-        "🔵 APPROVALS\n\n"
-        "Approved users filters se free.\n\n"
-        "`/approve` reply\n`/unapprove` reply"
-    ),
-    "sec:biolink": (
-        "⚡ BIOMODE / BioLink Guard\n\n"
-        "Bio mein link ho to message delete.\n\n"
-        "`/biolink on`\n`/biolink off`"
-    ),
-    "sec:msgdel": (
-        "🚨 MSGDELETE\n\n"
-        "Filters:\n"
-        "`/nolinks on|off`\n"
-        "`/noswear on|off`\n"
-        "`/nophone on|off`\n"
-        "`/nohashtag on|off`\n"
-        "`/noforward on|off`\n"
-        "`/nobotpromo on|off`\n"
-        "`/longmode on|off`\n"
-        "`/nomedia on|off`"
-    ),
-    "sec:edit": (
-        "🔮 EDIT PROTECT\n\n"
-        "Edited messages watch.\n\n"
-        "`/editprotect on`\n`/editprotect off`"
-    ),
-    "sec:links": (
-        "🔗 LINKS\n\n"
-        "`/nolinks on` block URLs\n"
-        "`/nolinks off`"
-    ),
-    "sec:long": (
-        "📜 LONGMODE\n\n"
-        "`/longmode on`\n"
-        "`/longmode off`\n"
-        "`/longmode 500`"
-    ),
-    "sec:media": (
-        "📌 MEDIA\n\n"
-        "`/nomedia on` photos/videos block\n"
-        "`/nomedia off`"
-    ),
-    "sec:promo": (
-        "📢 BOTPROMO\n\n"
-        "`/nobotpromo on`\n`/nobotpromo off`"
-    ),
-    "sec:fwd": (
-        "↩️ FORWARD\n\n"
-        "`/noforward on`\n`/noforward off`"
-    ),
-    "sec:hash": (
-        "# HASHTAGS\n\n"
-        "`/nohashtag on`\n`/nohashtag off`"
-    ),
-    "sec:phone": (
-        "📞 PHONE\n\n"
-        "`/nophone on`\n`/nophone off`\n`/nophone`"
-    ),
-    "sec:mute": (
-        "📣 MUTE & WARN\n\n"
-        "`/warn` reply\n"
-        "`/unwarn` reply\n"
-        "3 warns = mute"
-    ),
+    "sec:anticheat": "ᴀɴᴛɪ-ᴄʜᴇᴀᴛᴇʀ\n\nꜱᴘᴀᴍ / ᴄʜᴇᴀᴛ ᴍᴇꜱꜱᴀɢᴇ ᴅᴇʟᴇᴛᴇ\n/anticheat on\n/anticheat off",
+    "sec:abuse": "ᴀʙᴜꜱᴇ ꜰɪʟᴛᴇʀ\n\nɢᴀʟɪ-ɢᴀʟᴏᴄʜ ᴅᴇʟᴇᴛᴇ\n/noswear on\n/noswear off",
+    "sec:approve": "ᴀᴘᴘʀᴏᴠᴀʟꜱ\n\nᴀᴘᴘʀᴏᴠᴇᴅ ᴜꜱᴇʀ ꜰɪʟᴛᴇʀ ꜱᴇ ꜰʀᴇᴇ\n/approve reply\n/unapprove reply",
+    "sec:biolink": "ʙɪᴏᴍᴏᴅᴇ\n\nʙɪᴏ ᴍᴇɪɴ ʟɪɴᴋ ʜᴏ ᴛᴏ ᴍꜱɢ ᴅᴇʟᴇᴛᴇ\n/biolink on\n/biolink off",
+    "sec:msgdel": "ᴍꜱɢᴅᴇʟᴇᴛᴇ\n\n/nolinks /noswear /nophone\n/nohashtag /noforward /nobotpromo\n/longmode /nomedia",
+    "sec:edit": "ᴇᴅɪᴛ ᴘʀᴏᴛᴇᴄᴛ\n\nᴇᴅɪᴛᴇᴅ ᴍꜱɢ ᴡᴀᴛᴄʜ\n/editprotect on\n/editprotect off",
+    "sec:links": "ʟɪɴᴋꜱ\n\nᴜʀʟ ʙʟᴏᴄᴋ\n/nolinks on\n/nolinks off",
+    "sec:long": "ʟᴏɴɢᴍᴏᴅᴇ\n\nʟᴏɴɢ ꜱᴘᴀᴍ ʙʟᴏᴄᴋ\n/longmode on\n/longmode off\n/longmode 500",
+    "sec:media": "ᴍᴇᴅɪᴀ\n\nᴘʜᴏᴛᴏ/ᴠɪᴅᴇᴏ ʙʟᴏᴄᴋ\n/nomedia on\n/nomedia off",
+    "sec:promo": "ʙᴏᴛᴘʀᴏᴍᴏ\n\nʙᴏᴛ ᴀᴅꜱ ʙʟᴏᴄᴋ\n/nobotpromo on\n/nobotpromo off",
+    "sec:fwd": "ꜰᴏʀᴡᴀʀᴅ\n\nꜰᴏʀᴡᴀʀᴅᴇᴅ ᴍꜱɢ ʙʟᴏᴄᴋ\n/noforward on\n/noforward off",
+    "sec:hash": "ʜᴀꜱʜᴛᴀɢꜱ\n\n#ᴛᴀɢ ꜱᴘᴀᴍ ʙʟᴏᴄᴋ\n/nohashtag on\n/nohashtag off",
+    "sec:phone": "ᴘʜᴏɴᴇ\n\nɴᴜᴍʙᴇʀ ʙʟᴏᴄᴋ\n/nophone on\n/nophone off",
+    "sec:mute": "ᴍᴜᴛᴇ & ᴡᴀʀɴ\n\n/warn reply\n/unwarn reply\n3 ᴡᴀʀɴ = ᴍᴜᴛᴇ",
 }
 
 
 @client.on(events.NewMessage(pattern=r"^/(start)(@\w+)?"))
 async def start_h(event):
-    await send_start(event)
+    await send_start(event, force=True)
 
 
 @client.on(events.NewMessage(pattern=r"^/(help)(@\w+)?"))
 async def help_h(event):
-    await event.reply(help_home(), buttons=help_buttons())
+    photo = random.choice(START_PHOTOS) if START_PHOTOS else None
+    cap, ents = rich(help_home())
+    if photo:
+        try:
+            await client.send_file(event.chat_id, photo, caption=cap, formatting_entities=ents, buttons=help_buttons())
+            return
+        except Exception:
+            pass
+    await client.send_message(event.chat_id, cap, formatting_entities=ents, buttons=help_buttons())
 
 
 @client.on(events.CallbackQuery)
@@ -498,95 +470,89 @@ async def clicks(event):
     pages = {
         "menu:help": (help_home(), help_buttons()),
         "menu:tag": (
-            "△ TAG SYSTEM\n\n"
-            "`/utag` `/tagall` `/everyone` `@all`\n"
-            "All members — admin only\n\n"
-            "`/atag` `/admins` `@admins`\n"
-            "Sirf admins tag — group mein kaam karta hai\n\n"
-            "`/bots` list only, mention nahi\n"
-            "`/cancel` `/speed turbo|fast|normal|slow`",
-            [
-                [Button.inline(f"🏠 {sty('HELP')}", b"menu:help"), Button.inline(f"✨ {sty('START')}", b"menu:start")]
-            ],
+            "ᴛᴀɢ ꜱʏꜱᴛᴇᴍ\n\n"
+            "/utag /tagall /everyone @all\n"
+            "ꜱᴀʙ ᴍᴇᴍʙᴇʀꜱ ᴛᴀɢ · ᴀᴅᴍɪɴ ᴏɴʟʏ · ʙᴏᴛꜱ ꜱᴋɪᴘ\n\n"
+            "/atag /admins @admins\n"
+            "ꜱɪʀꜰ ᴀᴅᴍɪɴꜱ ᴛᴀɢ · ʀᴇᴘᴏʀᴛ ɴᴀʜɪ\n\n"
+            "/bots ʟɪꜱᴛ ᴏɴʟʏ\n"
+            "/cancel ᴜꜱᴇʀ ᴍᴇɴᴛɪᴏɴ ᴋᴇ ꜱᴀᴛʜ ꜱᴛᴏᴘ\n"
+            "/speed turbo|fast|normal|slow",
+            nav_row(),
         ),
         "menu:couples": (
-            "🔥 COUPLES\n\n`/couple` reply\n`/breakup`\n`/mycouple`\n`/flirt`",
-            help_buttons()[:1] + back_help(),
+            "ᴄᴏᴜᴘʟᴇꜱ\n\n"
+            "/couple reply · 24ʜ ᴄᴏᴜᴘʟᴇ\n"
+            "/pcouple reply · ᴘᴇʀᴍ\n"
+            "/mycouple · ᴄᴜʀʀᴇɴᴛ\n"
+            "/breakup · ᴛᴏᴅᴏ\n"
+            "/flirt · ᴄᴜᴛᴇ ʟɪɴᴇ",
+            nav_row(),
         ),
         "menu:games": (
-            "🎮 GAMES\n\n`/truth` `/dare` `/tod` `/spin` `/love` `/kiss_marry_kill`",
-            [
-                [Button.inline(f"🏠 {sty('HELP')}", b"menu:help"), Button.inline(f"✨ {sty('START')}", b"menu:start")]
-            ],
+            "ɢᴀᴍᴇꜱ\n\n"
+            "/truth · ʀᴀɴᴅᴏᴍ ᴛʀᴜᴛʜ\n"
+            "/dare · ʀᴀɴᴅᴏᴍ ᴅᴀʀᴇ\n"
+            "/tod · ᴛʀᴜᴛʜ ᴏʀ ᴅᴀʀᴇ\n"
+            "/spin · ꜱᴜʀᴘʀɪꜱᴇ\n"
+            "/love · % ᴍᴇᴛᴇʀ\n"
+            "/kiss_marry_kill · 3 ᴍᴇᴍʙᴇʀꜱ",
+            nav_row(),
         ),
         "menu:tools": (
-            "✨ USER TOOLS\n\n`/id` `/ping` `/afk` `/user_stats`",
-            [
-                [Button.inline(f"🏠 {sty('HELP')}", b"menu:help"), Button.inline(f"✨ {sty('START')}", b"menu:start")]
-            ],
+            "ᴜꜱᴇʀ ᴛᴏᴏʟꜱ\n\n"
+            "/id · ᴜꜱᴇʀ ɪᴅ\n"
+            "/ping · ꜱᴘᴇᴇᴅ\n"
+            "/afk · ᴀᴡᴀʏ\n"
+            "/user_stats · ꜱᴛᴀᴛꜱ",
+            nav_row(),
         ),
         "menu:welcome": (
-            "👋 WELCOME\n\n"
-            "`/welcome on` — naya member aaye to msg\n"
-            "`/welcome off`\n"
-            "`/setwelcome text` — custom text, `{name}` use karo",
+            "ᴡᴇʟᴄᴏᴍᴇ\n\n"
+            "/welcome on · ɴᴇᴡ ᴍᴇᴍʙᴇʀ ᴍꜱɢ\n"
+            "/welcome off · ʙᴀɴᴅ\n"
+            "/setwelcome text · {name} ʟɪᴋʜᴏ",
             [
-                [Button.inline(f"🟢 {sty('WELCOME ON')}", b"do:welcome_on"), Button.inline(f"🔴 {sty('WELCOME OFF')}", b"do:welcome_off")],
-                [Button.inline(f"🏠 {sty('HELP')}", b"menu:help")],
+                [Button.inline(sc("✦ ᴡᴇʟᴄᴏᴍᴇ ᴏɴ"), b"do:welcome_on"), Button.inline(sc("✦ ᴡᴇʟᴄᴏᴍᴇ ᴏꜰꜰ"), b"do:welcome_off")],
+                *nav_row(),
             ],
         ),
         "menu:gset": (
-            "⚙ GROUP SETTINGS\n\n"
-            "`/settings` dekho\n"
-            "`/settings admin_only on|off`\n"
-            "`/settings cooldown 12`\n"
-            "`/settings batch 5`\n"
-            "`/speed 2`\n"
-            "`/welcome on|off`",
-            [
-                [Button.inline(f"⚠ {sty('SECURITY')}", b"menu:security")],
-                [Button.inline(f"🏠 {sty('HELP')}", b"menu:help")],
-            ],
+            "ɢʀᴏᴜᴘ ꜱᴇᴛᴛɪɴɢꜱ\n\n"
+            "/settings · ꜱᴀʀɪ ꜰʟᴀɢꜱ\n"
+            "/settings admin_only on|off\n"
+            "/settings cooldown 12\n"
+            "/settings batch 5\n"
+            "/speed 2\n"
+            "/welcome on|off",
+            nav_row(),
         ),
         "menu:security": (
-            "⚠ SECURITY GUARD\n\nSelect a module:",
+            "ꜱᴇᴄᴜʀɪᴛʏ ɢᴜᴀʀᴅ\n\n"
+            "ʜᴀʀ ᴍᴏᴅᴜʟᴇ ᴋᴀ ᴅᴇꜱᴄʀɪᴘᴛɪᴏɴ ʙᴜᴛᴛᴏɴ ᴋᴇ ᴀɴᴅᴀʀ\n"
+            "ᴀᴅᴍɪɴ + ʙᴏᴛ ᴀᴅᴍɪɴ ᴢᴀʀᴏᴏʀɪ",
             guard_buttons(),
         ),
     }
     await event.answer()
     if data == "menu:start":
-        await send_start(event)
+        await send_start(event, force=True)
         return
     if data == "do:welcome_on":
-        if event.is_private:
-            await event.reply("Welcome group mein on hota hai.")
-            return
-        uset(event.chat_id, welcome=True)
-        try:
-            await event.edit("Welcome ON ✅", buttons=pages["menu:welcome"][1])
-        except Exception:
-            await event.reply("Welcome ON ✅")
+        if not event.is_private:
+            uset(event.chat_id, welcome=True)
+        await edit_say(event, "ᴡᴇʟᴄᴏᴍᴇ ᴏɴ", pages["menu:welcome"][1])
         return
     if data == "do:welcome_off":
         if not event.is_private:
             uset(event.chat_id, welcome=False)
-        try:
-            await event.edit("Welcome OFF ❌", buttons=pages["menu:welcome"][1])
-        except Exception:
-            await event.reply("Welcome OFF ❌")
+        await edit_say(event, "ᴡᴇʟᴄᴏᴍᴇ ᴏꜰꜰ", pages["menu:welcome"][1])
         return
     if data in pages:
-        text, btns = pages[data]
-        try:
-            await event.edit(text, buttons=btns)
-        except Exception:
-            await event.reply(text, buttons=btns)
+        await edit_say(event, pages[data][0], pages[data][1])
         return
     if data in SEC_PAGES:
-        try:
-            await event.edit(SEC_PAGES[data], buttons=back_help())
-        except Exception:
-            await event.reply(SEC_PAGES[data], buttons=back_help())
+        await edit_say(event, SEC_PAGES[data], back_help())
 
 
 @client.on(events.NewMessage(pattern=r"^/(utag|tagall|everyone|all|mention)(@\w+)?"))
@@ -626,8 +592,14 @@ async def bots_list(event):
 async def cancel(event):
     if event.is_private:
         return
+    sender = await event.get_sender()
+    name = sender.first_name or sender.username or str(sender.id)
+    cancel_by[event.chat_id] = (sender.id, name)
+    running = event.chat_id in active_jobs
     active_jobs.discard(event.chat_id)
-    await event.reply("Tag stop.")
+    await mention_cancel(event.chat_id, sender.id, name)
+    if not running:
+        await say(event, "ᴋᴏɪ ᴛᴀɢ ᴄʜᴀʟ ɴᴀʜɪ ʀᴀʜᴀ")
 
 
 @client.on(events.NewMessage(pattern=r"^/(ping)(@\w+)?"))
