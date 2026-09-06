@@ -1,0 +1,12 @@
+# MentionMayaBot
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+*.session
+*.session-journal
+data/
+.DS_Store
+.idea/
+.vscode/
