@@ -30,6 +30,7 @@ PLACE_RE = re.compile(
     re.I,
 )
 BTN_RE = re.compile(r"\[\s*([^\]]+?)\s*\]\(\s*(https?://[^\s)]+)\s*\)")
+SEP_TEXT = "______"
 welcome_seen: dict[str, float] = {}
 
 UPDATES_URL = CONFIG.get("updates_url") or CONFIG.get("support_url")
@@ -37,28 +38,19 @@ SUPPORT_URL = CONFIG.get("support_url")
 
 
 def default_welcome_buttons():
-    return [
-        [btn("updates", url=UPDATES_URL, pe_name="welcome_b1")],
-        [btn("support", url=SUPPORT_URL, pe_name="welcome_b2")],
-    ]
+    return [[btn("updates", url=UPDATES_URL, pe_name="welcome_b1")]]
 
 
-def welcome_line_icon(index: int) -> int:
-    return (
-        pe_icon(f"welcome_l{index + 1}")
-        or pe_icon("welcome_line")
-        or pe_icon("welcome")
-    )
+def _left(i: int) -> int:
+    return pe_icon(f"welcome_l{i + 1}") or pe_icon("welcome_line") or pe_icon("welcome")
 
 
-def has_custom_emoji(saved) -> bool:
-    for item in saved or []:
-        kind = item.get("t") if isinstance(item, dict) else None
-        if kind == "emoji" and item.get("id"):
-            return True
-        if getattr(item, "document_id", None):
-            return True
-    return False
+def _right(i: int) -> int:
+    return pe_icon(f"welcome_r{i + 1}") or _left(i)
+
+
+def _sep(i: int) -> int:
+    return pe_icon(f"sep_{i + 1}") or pe_icon("welcome_line") or _left(i)
 
 
 def extract_buttons_keep_ents(text: str, saved_ents):
@@ -108,30 +100,47 @@ def fill_welcome(template: str, saved_ents, values: dict, user: User):
     return text, load_ents(ents)
 
 
-def add_line_premium(text: str, ents):
+def wrap_welcome(text: str, ents):
+    """emoji NAME emoji then ______ after every content line. Auto + custom."""
     if ents and hasattr(ents[0], "offset"):
         saved = dump_ents(ents)
     else:
         saved = [dict(x) for x in (ents or [])]
-    starts = [0]
-    for idx, ch in enumerate(text or ""):
-        if ch == "\n":
-            starts.append(idx + 1)
+    raw_lines = (text or "").split("\n")
+    out = ""
+    new_ents = []
     line_i = 0
-    numbered = []
-    for start in starts:
-        nxt = text.find("\n", start)
-        line = text[start:] if nxt < 0 else text[start:nxt]
-        if line.strip():
-            numbered.append((start, line_i))
+    cursor = 0
+    for raw in raw_lines:
+        nxt = cursor + len(raw)
+        if raw.strip():
+            left = FALLBACK + " "
+            right = " " + FALLBACK
+            sep = FALLBACK + " " + SEP_TEXT
+            chunk = left + raw + right
+            base = utf16_len(out)
+            new_ents.append({"t": "emoji", "off": base, "len": utf16_len(FALLBACK), "id": int(_left(line_i))})
+            for item in saved:
+                off = int(item.get("off", 0))
+                start16 = utf16_len(text[:cursor])
+                end16 = utf16_len(text[:nxt])
+                if start16 <= off < end16:
+                    cur = dict(item)
+                    cur["off"] = off - start16 + base + utf16_len(left)
+                    new_ents.append(cur)
+            new_ents.append({
+                "t": "emoji",
+                "off": base + utf16_len(left + raw + " "),
+                "len": utf16_len(FALLBACK),
+                "id": int(_right(line_i)),
+            })
+            out += chunk + "\n"
+            sep_off = utf16_len(out)
+            new_ents.append({"t": "emoji", "off": sep_off, "len": utf16_len(FALLBACK), "id": int(_sep(line_i))})
+            out += sep + "\n"
             line_i += 1
-    for start, idx in reversed(numbered):
-        start16 = utf16_len(text[:start])
-        piece = FALLBACK + " "
-        text = text[:start] + piece + text[start:]
-        saved = shift_saved_ents(saved, start16, 0, utf16_len(piece))
-        saved.append({"t": "emoji", "off": start16, "len": utf16_len(FALLBACK), "id": int(welcome_line_icon(idx))})
-    return text, load_ents(saved)
+        cursor = nxt + 1
+    return out.rstrip(), load_ents(new_ents)
 
 
 def setwelcome_prefix(raw: str) -> str:
@@ -181,15 +190,19 @@ async def send_welcome(client, chat_id: int, user: User, title: str = "", force:
     raw, extra_btns, raw_ents = extract_buttons_keep_ents(raw, s.get("welcome_entities") if custom else [])
     values = {"first_name": first, "username": uname, "id": str(user.id), "chatname": title or "group"}
     text, ents = fill_welcome(raw, raw_ents or [], values, user)
-    if not has_custom_emoji(raw_ents):
-        text, ents = add_line_premium(text, ents)
+    text, ents = wrap_welcome(text, ents)
     if s.get("cleanwelcome") and s.get("welcome_last") and not force:
         try:
             await client.delete_messages(chat_id, int(s["welcome_last"]))
         except Exception:
             pass
-    saved_btns = s.get("welcome_buttons") or extra_btns
-    btns = parse_welcome_buttons(saved_btns)
+    if custom and extra_btns:
+        saved_btns = s.get("welcome_buttons") or extra_btns
+        btns = parse_welcome_buttons(saved_btns)
+    elif custom and s.get("welcome_buttons"):
+        btns = parse_welcome_buttons(s.get("welcome_buttons"))
+    else:
+        btns = default_welcome_buttons()
     media = s.get("welcome_media") or ""
     try:
         payload = {"chat_id": chat_id}
